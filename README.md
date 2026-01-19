@@ -97,6 +97,24 @@ Go to Settings (gear icon) to:
 - Create custom actions with shell scripts
 - Enable/disable providers
 
+## Acknowledgments
+
+This project was inspired by and learned from:
+
+### [NextAI Translator](https://github.com/nextai-translator/nextai-translator)
+A powerful AI translation tool built with Tauri. Studied its architecture for:
+- Multi-provider API integration patterns
+- Caching strategies for AI responses
+- Clipboard and text selection handling on macOS
+
+### [Kelivo](https://github.com/Chevey339/kelivo)
+A Flutter-based AI chat application. Learned from its implementation of:
+- Clean Flutter architecture and state management
+- macOS-native UI patterns and dark mode support
+- Streaming response handling for AI APIs
+
+Thank you to both projects for inspiring the design and implementation of Oh-My-Translator!
+
 ## License
 
 MIT
