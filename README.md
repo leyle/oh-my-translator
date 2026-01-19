@@ -1,16 +1,106 @@
-# oh_my_translator
+# Oh-My-Translator
 
-A new Flutter project.
+AI-powered translation tool for macOS with multi-provider support.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+### Translation Modes
+- **Translate** - Full text translation
+- **Polish** - Improve writing style and grammar
+- **Explain** - Context-aware word/phrase explanations with IPA pronunciation
 
-A few resources to get you started if this is your first Flutter project:
+### Multi-Provider Support
+Works with any OpenAI-compatible API:
+- OpenAI
+- OpenRouter
+- Vercel AI Gateway
+- Any OpenAI-compatible endpoint
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Smart Features
+- **Model-aware caching** - LRU cache that invalidates on model change
+- **Auto re-request** - Automatically re-translates when you switch AI models
+- **Word selection** - Click any word to get contextual explanations
+- **Custom actions** - Create shell-script powered actions for selected text
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Integration
+- **URL Scheme** (`omt://`) - Call from shell scripts, works whether app is running or not
+- **Keyboard shortcut** - `Cmd+Enter` to translate
+- **CLI args** - Pass text directly when launching
+
+### UI/UX
+- Clean macOS-native interface
+- Dark mode support
+- Persistent window size
+- Drag-and-drop action reordering
+
+## Requirements
+
+- macOS 12.0+
+- Flutter 3.x
+
+## Build
+
+```bash
+# Clone the repository
+git clone https://github.com/leyle/oh-my-translator.git
+cd oh-my-translator
+
+# Get dependencies
+flutter pub get
+
+# Build for macOS (debug)
+flutter build macos --debug
+
+# Build for macOS (release)
+flutter build macos --release
+```
+
+The built app will be at:
+- Debug: `build/macos/Build/Products/Debug/oh_my_translator.app`
+- Release: `build/macos/Build/Products/Release/oh_my_translator.app`
+
+## Usage
+
+### From Shell Script
+
+```bash
+# Translate text from clipboard
+./translate.sh
+
+# Translate specific text
+./translate.sh "Hello World"
+
+# Translate to specific language
+./translate.sh --to=ja "Hello World"
+```
+
+### URL Scheme
+
+```bash
+# Open with text (works if app is running or not)
+open "omt://translate?text=Hello%20World"
+
+# With target language
+open "omt://translate?text=Hello%20World&to=zh"
+```
+
+### In-App
+1. Enter or paste text in the input area
+2. Select target language
+3. Press `Cmd+Enter` or click Translate button
+4. Click any word to get contextual explanation
+
+## Configuration
+
+Go to Settings (gear icon) to:
+- Add AI providers (API key, base URL, model)
+- Create custom actions with shell scripts
+- Enable/disable providers
+
+## License
+
+MIT
+
+## Author
+
+**leyle** - [GitHub](https://github.com/leyle)
