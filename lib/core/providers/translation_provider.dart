@@ -178,7 +178,7 @@ class TranslationProvider extends ChangeNotifier {
 
   /// Set the source text for translation
   void setSourceText(String text) {
-    _sourceText = text;
+    _sourceText = text.trim();
     notifyListeners();
   }
 

@@ -403,8 +403,8 @@ class SettingsPage extends StatelessWidget {
                   onPressed: () {
                     final settings = context.read<SettingsProvider>();
                     settings.addAction(CustomAction.create(
-                      name: nameController.text,
-                      scriptPath: scriptController.text,
+                      name: nameController.text.trim(),
+                      scriptPath: scriptController.text.trim(),
                       iconName: selectedIcon,
                     ));
                     Navigator.pop(context);
@@ -503,8 +503,8 @@ class SettingsPage extends StatelessWidget {
                   onPressed: () {
                     final settings = context.read<SettingsProvider>();
                     settings.updateAction(action.copyWith(
-                      name: nameController.text,
-                      scriptPath: scriptController.text,
+                      name: nameController.text.trim(),
+                      scriptPath: scriptController.text.trim(),
                       iconName: selectedIcon,
                     ));
                     Navigator.pop(context);
@@ -576,11 +576,11 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
 
   ProviderConfig _buildTempProvider() {
     return ProviderConfig.create(
-      name: _nameController.text,
-      apiUrl: _urlController.text,
-      apiPath: _pathController.text,
-      apiKey: _keyController.text,
-      model: _modelController.text,
+      name: _nameController.text.trim(),
+      apiUrl: _urlController.text.trim(),
+      apiPath: _pathController.text.trim(),
+      apiKey: _keyController.text.trim(),
+      model: _modelController.text.trim(),
     );
   }
 
@@ -613,7 +613,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
   }
 
   Future<void> _fetchModels() async {
-    if (_urlController.text.isEmpty || _keyController.text.isEmpty) {
+    if (_urlController.text.trim().isEmpty || _keyController.text.trim().isEmpty) {
       setState(() => _fetchError = 'Please enter API URL and API Key first');
       return;
     }
@@ -683,21 +683,21 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
     
     if (widget.existing == null) {
       settings.addProvider(ProviderConfig.create(
-        name: _nameController.text,
-        apiUrl: _urlController.text,
-        apiPath: _pathController.text,
-        apiKey: _keyController.text,
-        model: _modelController.text,
+        name: _nameController.text.trim(),
+        apiUrl: _urlController.text.trim(),
+        apiPath: _pathController.text.trim(),
+        apiKey: _keyController.text.trim(),
+        model: _modelController.text.trim(),
         selectedModels: _selectedModels,
         enabled: _enabled,
       ));
     } else {
       settings.updateProvider(widget.existing!.copyWith(
-        name: _nameController.text,
-        apiUrl: _urlController.text,
-        apiPath: _pathController.text,
-        apiKey: _keyController.text,
-        model: _modelController.text,
+        name: _nameController.text.trim(),
+        apiUrl: _urlController.text.trim(),
+        apiPath: _pathController.text.trim(),
+        apiKey: _keyController.text.trim(),
+        model: _modelController.text.trim(),
         selectedModels: _selectedModels,
         enabled: _enabled,
       ));

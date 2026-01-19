@@ -37,6 +37,9 @@ class _TranslatePageState extends State<TranslatePage> {
   late HighlightTextEditingController _inputController;
   final FocusNode _inputFocusNode = FocusNode();
   
+  // For resizable input/output areas (0.0 to 1.0 ratio for input area)
+  double _inputFlex = 0.2;
+  
   // For floating selection toolbar
   OverlayEntry? _selectionOverlay;
   String? _selectedText;
@@ -250,34 +253,53 @@ class _TranslatePageState extends State<TranslatePage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      // Mode and language selectors
-                      _buildToolbar(context),
-                      const SizedBox(height: 12),
-                  
-                      // Input area
-                      Expanded(
-                        flex: 2,
-                        child: _buildInputArea(context),
-                      ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final availableHeight = constraints.maxHeight - 120; // Reserve space for toolbar, button, status bar
+                      final inputHeight = (availableHeight * _inputFlex).clamp(60.0, availableHeight - 60.0);
+                      final outputHeight = availableHeight - inputHeight;
                       
-                      const SizedBox(height: 8),
+                      return Column(
+                        children: [
+                          // Mode and language selectors
+                          _buildToolbar(context),
+                          const SizedBox(height: 12),
                       
-                      // Translate button
-                      _buildTranslateButton(context),
-                      
-                      const SizedBox(height: 8),
-                      
-                      // Output area
-                      Expanded(
-                        flex: 8,
-                        child: _buildOutputArea(context),
-                      ),
-                      
-                      // Bottom status bar with provider/model
-                      _buildStatusBar(context),
-                    ],
+                          // Input area
+                          SizedBox(
+                            height: inputHeight,
+                            child: _buildInputArea(context),
+                          ),
+                          
+                          const SizedBox(height: 4),
+                          
+                          // Draggable Translate button (resize handle)
+                          GestureDetector(
+                            onVerticalDragUpdate: (details) {
+                              setState(() {
+                                final delta = details.delta.dy / availableHeight;
+                                _inputFlex = (_inputFlex + delta).clamp(0.1, 0.7);
+                              });
+                            },
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.resizeRow,
+                              child: _buildTranslateButton(context),
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 4),
+                          
+                          // Output area
+                          SizedBox(
+                            height: outputHeight,
+                            child: _buildOutputArea(context),
+                          ),
+                          
+                          // Bottom status bar with provider/model
+                          _buildStatusBar(context),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -741,39 +763,42 @@ class _TranslatePageState extends State<TranslatePage> {
         final cs = Theme.of(context).colorScheme;
         final isTranslating = translation.isTranslating;
 
-        return SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: isTranslating
-                ? () => translation.stopTranslation()
-                : () {
-                    translation.setSourceText(_inputController.text);
-                    translation.translate();
-                  },
-            icon: isTranslating
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: cs.onPrimary,
+        return Tooltip(
+          message: 'Click to translate, drag to resize',
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: isTranslating
+                  ? () => translation.stopTranslation()
+                  : () {
+                      translation.setSourceText(_inputController.text);
+                      translation.translate();
+                    },
+              icon: isTranslating
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: cs.onPrimary,
+                      ),
+                    )
+                  : Icon(
+                      translation.mode == TranslateMode.translate
+                          ? LucideIcons.languages
+                          : LucideIcons.sparkles,
+                      size: 18,
                     ),
-                  )
-                : Icon(
-                    translation.mode == TranslateMode.translate
-                        ? LucideIcons.languages
-                        : LucideIcons.sparkles,
-                    size: 18,
-                  ),
-            label: Text(
-              isTranslating
-                  ? 'Stop'
-                  : translation.mode.displayName,
-            ),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+              label: Text(
+                isTranslating
+                    ? 'Stop'
+                    : translation.mode.displayName,
+              ),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),
