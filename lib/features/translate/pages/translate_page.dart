@@ -99,13 +99,17 @@ class _TranslatePageState extends State<TranslatePage> {
   }
   
   /// Parse and handle incoming omt:// URL
-  void _handleUri(Uri uri) {
+  void _handleUri(Uri uri) async {
     // Expected format: omt://translate?text=Hello%20World&to=zh&mode=translate
     final text = uri.queryParameters['text'];
     if (text == null || text.isEmpty) return;
     
     final targetLang = uri.queryParameters['to'];
     // final mode = uri.queryParameters['mode'];
+    
+    // Bring window to front FIRST
+    await windowManager.show();
+    await windowManager.focus();
     
     // Update input text
     _inputController.text = text;
@@ -122,10 +126,6 @@ class _TranslatePageState extends State<TranslatePage> {
       }
       
       translation.translate();
-      
-      // Bring window to front
-      windowManager.show();
-      windowManager.focus();
     });
   }
   

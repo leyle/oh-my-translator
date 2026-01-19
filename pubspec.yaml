@@ -33,6 +33,7 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   app_links: ^7.0.0
   url_launcher: ^6.3.2
+  tray_manager: ^0.5.2
 
 dev_dependencies:
   flutter_test:
@@ -59,6 +60,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - images/omtcat.jpeg
+    - images/tray_icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
