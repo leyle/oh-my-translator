@@ -30,7 +30,7 @@ void main(List<String> args) async {
     size: Size(savedWidth, savedHeight),
     minimumSize: const Size(600, 450),
     center: true,
-    title: 'Oh-My-Translator',
+    title: 'OhMyTranslator',
     titleBarStyle: TitleBarStyle.hidden,
     backgroundColor: Colors.transparent,
   );
@@ -79,7 +79,7 @@ class OhMyTranslatorApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Oh-My-Translator',
+        title: 'OhMyTranslator',
         debugShowCheckedModeBanner: false,
         theme: _buildLightTheme(),
         darkTheme: _buildDarkTheme(),

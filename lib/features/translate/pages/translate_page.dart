@@ -432,15 +432,29 @@ class _TranslatePageState extends State<TranslatePage> {
         padding: const EdgeInsets.only(left: 80, right: 12),
         child: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Center(
-                child: Text(
-                  'Oh-My-Translator',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF666666),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.asset(
+                        'images/omtcat.jpeg',
+                        width: 24,
+                        height: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'OhMyTranslator',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF666666),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -793,7 +807,6 @@ class _TranslatePageState extends State<TranslatePage> {
                       child: Markdown(
                         data: translation.resultText,
                         padding: const EdgeInsets.all(16),
-                        selectable: true,
                         shrinkWrap: true,
                         styleSheet: MarkdownStyleSheet(
                           p: TextStyle(fontSize: 15, color: cs.onSurface, height: 1.5),

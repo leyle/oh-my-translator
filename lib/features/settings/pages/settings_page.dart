@@ -257,7 +257,7 @@ class SettingsPage extends StatelessWidget {
                 Icon(LucideIcons.languages, color: cs.primary),
                 const SizedBox(width: 12),
                 const Text(
-                  'Oh-My-Translator',
+                  'OhMyTranslator',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ],
