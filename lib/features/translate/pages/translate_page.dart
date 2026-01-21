@@ -243,7 +243,7 @@ class _TranslatePageState extends State<TranslatePage> {
           ),
         },
         child: Scaffold(
-          backgroundColor: cs.surface,
+          // backgroundColor: cs.surface, // Inherit from main theme (Alice Blue)
           body: Column(
             children: [
               // Custom title bar for macOS
@@ -253,53 +253,67 @@ class _TranslatePageState extends State<TranslatePage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final availableHeight = constraints.maxHeight - 120; // Reserve space for toolbar, button, status bar
-                      final inputHeight = (availableHeight * _inputFlex).clamp(60.0, availableHeight - 60.0);
-                      final outputHeight = availableHeight - inputHeight;
+                  child: Column(
+                    children: [
+                      // Mode and language selectors
+                      _buildToolbar(context),
+                      const SizedBox(height: 12),
+
+                      // Flexible content area
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Calculate available height for input + output
+                            // Deduct space for button and spacers (approx 60px)
+                            final buttonHeight = 60.0; 
+                            final availableHeight = constraints.maxHeight - buttonHeight;
+                            
+                            final inputHeight = (availableHeight * _inputFlex).clamp(60.0, availableHeight - 60.0);
+                            final outputHeight = availableHeight - inputHeight;
+
+                            return Column(
+                              children: [
+                                // Input area
+                                SizedBox(
+                                  height: inputHeight,
+                                  child: _buildInputArea(context),
+                                ),
+                                
+                                const SizedBox(height: 4),
+                                
+                                // Draggable Translate button (resize handle)
+                                SizedBox(
+                                  height: buttonHeight - 8, // Subtract 8 for top/bottom spacers
+                                  child: GestureDetector(
+                                    onVerticalDragUpdate: (details) {
+                                      setState(() {
+                                        final delta = details.delta.dy / availableHeight;
+                                        _inputFlex = (_inputFlex + delta).clamp(0.1, 0.7);
+                                      });
+                                    },
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.resizeRow,
+                                      child: _buildTranslateButton(context),
+                                    ),
+                                  ),
+                                ),
+                                
+                                const SizedBox(height: 4),
+                                
+                                // Output area
+                                SizedBox(
+                                  height: outputHeight,
+                                  child: _buildOutputArea(context),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                       
-                      return Column(
-                        children: [
-                          // Mode and language selectors
-                          _buildToolbar(context),
-                          const SizedBox(height: 12),
-                      
-                          // Input area
-                          SizedBox(
-                            height: inputHeight,
-                            child: _buildInputArea(context),
-                          ),
-                          
-                          const SizedBox(height: 4),
-                          
-                          // Draggable Translate button (resize handle)
-                          GestureDetector(
-                            onVerticalDragUpdate: (details) {
-                              setState(() {
-                                final delta = details.delta.dy / availableHeight;
-                                _inputFlex = (_inputFlex + delta).clamp(0.1, 0.7);
-                              });
-                            },
-                            child: MouseRegion(
-                              cursor: SystemMouseCursors.resizeRow,
-                              child: _buildTranslateButton(context),
-                            ),
-                          ),
-                          
-                          const SizedBox(height: 4),
-                          
-                          // Output area
-                          SizedBox(
-                            height: outputHeight,
-                            child: _buildOutputArea(context),
-                          ),
-                          
-                          // Bottom status bar with provider/model
-                          _buildStatusBar(context),
-                        ],
-                      );
-                    },
+                      // Bottom status bar with provider/model
+                      _buildStatusBar(context),
+                    ],
                   ),
                 ),
               ),
@@ -571,40 +585,94 @@ class _TranslatePageState extends State<TranslatePage> {
       orElse: () => languages.first,
     );
 
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 140),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+    return PopupMenuButton<String>(
+      tooltip: 'Select Language',
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 4,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 160), 
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outline.withOpacity(0.1)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                currentLang.name, 
+                style: TextStyle(
+                  fontSize: 13, 
+                  color: cs.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              LucideIcons.chevronDown,
+              size: 14,
+              color: cs.onSurface.withOpacity(0.5),
+            ),
+          ],
+        ),
       ),
-      child: DropdownButton<String>(
-        value: currentCode,
-        underline: const SizedBox(),
-        isDense: true,
-        isExpanded: true,
-        style: TextStyle(fontSize: 13, color: cs.onSurface),
-        items: languages.map((lang) {
-          return DropdownMenuItem(
+      itemBuilder: (context) {
+        return languages.map((lang) {
+          final isSelected = lang.code == currentCode;
+          return PopupMenuItem<String>(
             value: lang.code,
-            child: Text(lang.name, overflow: TextOverflow.ellipsis),
+            height: 40,
+            child: Row(
+              children: [
+                if (isSelected)
+                  Icon(LucideIcons.check, size: 16, color: cs.primary)
+                else
+                  const SizedBox(width: 16),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    lang.name,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected ? cs.primary : cs.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
-        }).toList(),
-        onChanged: (code) {
-          if (code != null) onChanged(code);
-        },
-      ),
+        }).toList();
+      },
+      onSelected: (code) {
+        if (code != currentCode) {
+          onChanged(code);
+        }
+      },
     );
   }
 
   Widget _buildInputArea(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final settings = context.watch<SettingsProvider>();
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withOpacity(0.5),
+        color: cs.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outline.withOpacity(0.2)),
+        border: Border.all(color: cs.outline.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Listener(
         behavior: HitTestBehavior.translucent,
@@ -647,7 +715,7 @@ class _TranslatePageState extends State<TranslatePage> {
           maxLines: null,
           expands: true,
           textAlignVertical: TextAlignVertical.top,
-          style: TextStyle(fontSize: 15, color: cs.onSurface),
+          style: TextStyle(fontSize: settings.fontSize, color: cs.onSurface),
           decoration: InputDecoration(
             hintText: 'Enter text to translate...',
             hintStyle: TextStyle(color: cs.onSurface.withOpacity(0.4)),
@@ -664,63 +732,7 @@ class _TranslatePageState extends State<TranslatePage> {
     );
   }
 
-  Widget _buildCustomContextMenu(BuildContext context, EditableTextState editableTextState) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final settings = context.read<SettingsProvider>();
-    final actions = settings.enabledActions;
-    final selectedText = editableTextState.textEditingValue.selection.textInside(
-      editableTextState.textEditingValue.text,
-    );
-
-    return AdaptiveTextSelectionToolbar(
-      anchors: editableTextState.contextMenuAnchors,
-      children: [
-        // Custom actions from settings
-        for (final action in actions)
-          _ContextMenuButton(
-            icon: _getContextMenuIcon(action.iconName),
-            label: action.name,
-            onTap: () {
-              ContextMenuController.removeAny();
-              _runCustomAction(action, selectedText);
-            },
-          ),
-        // Built-in Copy
-        _ContextMenuButton(
-          icon: LucideIcons.copy,
-          label: 'Copy',
-          onTap: () {
-            ContextMenuController.removeAny();
-            Clipboard.setData(ClipboardData(text: selectedText));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Copied to clipboard'),
-                duration: Duration(seconds: 1),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  IconData _getContextMenuIcon(String iconName) {
-    switch (iconName) {
-      case 'volume2': return LucideIcons.volume2;
-      case 'languages': return LucideIcons.languages;
-      case 'search': return LucideIcons.search;
-      case 'sparkles': return LucideIcons.sparkles;
-      case 'terminal': return LucideIcons.terminal;
-      case 'clipboard': return LucideIcons.clipboard;
-      case 'share': return LucideIcons.share;
-      case 'wand': return LucideIcons.wand;
-      case 'zap': return LucideIcons.zap;
-      case 'send': return LucideIcons.send;
-      default: return LucideIcons.play;
-    }
-  }
+  // ... (context menu code skipped) ...
 
   Future<void> _runCustomAction(CustomAction action, String selectedText) async {
     if (selectedText.isEmpty) return;
@@ -809,15 +821,23 @@ class _TranslatePageState extends State<TranslatePage> {
 
   Widget _buildOutputArea(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final settings = context.watch<SettingsProvider>();
 
     return Consumer<TranslationProvider>(
       builder: (context, translation, _) {
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest.withOpacity(0.5),
+            color: cs.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cs.outline.withOpacity(0.2)),
+            border: Border.all(color: cs.outline.withOpacity(0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: translation.hasError
               ? Padding(
@@ -834,19 +854,50 @@ class _TranslatePageState extends State<TranslatePage> {
                         padding: const EdgeInsets.all(16),
                         shrinkWrap: true,
                         styleSheet: MarkdownStyleSheet(
-                          p: TextStyle(fontSize: 15, color: cs.onSurface, height: 1.5),
-                          h1: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: cs.onSurface),
-                          h2: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: cs.onSurface),
-                          h3: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: cs.onSurface),
-                          strong: TextStyle(fontWeight: FontWeight.bold, color: cs.onSurface),
-                          em: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurface),
+                          p: TextStyle(fontSize: settings.fontSize, color: cs.onSurface, height: 1.6),
+                          // Headers - Keep colored for section separation but ensure high contrast
+                          h1: TextStyle(fontSize: settings.fontSize + 6, fontWeight: FontWeight.w800, color: cs.primary, letterSpacing: -0.5),
+                          h2: TextStyle(fontSize: settings.fontSize + 4, fontWeight: FontWeight.w700, color: cs.primary, letterSpacing: -0.5),
+                          h3: TextStyle(fontSize: settings.fontSize + 2, fontWeight: FontWeight.w600, color: cs.primary),
+                          h4: TextStyle(fontSize: settings.fontSize, fontWeight: FontWeight.w600, color: cs.primary),
+                          
+                          // Emphasis - Use Primary Color for selective highlighting (per user request)
+                          strong: TextStyle(fontWeight: FontWeight.bold, color: cs.primary), // Cobalt Blue for highlights
+                          em: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurface), // Standard for italics
+                          
+                          // Code
                           code: TextStyle(
-                            backgroundColor: cs.surfaceContainerHighest,
+                            backgroundColor: cs.surfaceContainerHighest.withOpacity(0.3),
+                            color: cs.onSurface, // Standard text color for code
                             fontFamily: 'monospace',
-                            fontSize: 14,
+                            fontSize: (settings.fontSize - 1).clamp(12.0, 30.0),
                           ),
+                          codeblockPadding: const EdgeInsets.all(12),
+                          codeblockDecoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: cs.outline.withOpacity(0.1)),
+                          ),
+                          
+                          // Quotes
+                          blockquote: TextStyle(color: cs.onSurface.withOpacity(0.8), fontStyle: FontStyle.italic),
+                          blockquotePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          blockquoteDecoration: BoxDecoration(
+                            border: Border(left: BorderSide(color: cs.primary.withOpacity(0.5), width: 4)),
+                            color: cs.surfaceContainerHighest.withOpacity(0.3),
+                            borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
+                          ),
+                          
+                          // Lists
+                          listBullet: TextStyle(color: cs.onSurface.withOpacity(0.7)),
+                          
+                          // Links
+                          a: TextStyle(color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary.withOpacity(0.3)),
+                          
+                          // Spacing
+                          blockSpacing: 12.0,
                           horizontalRuleDecoration: BoxDecoration(
-                            border: Border(top: BorderSide(color: cs.outline.withOpacity(0.3))),
+                            border: Border(top: BorderSide(color: cs.outline.withOpacity(0.2))),
                           ),
                         ),
                       ),
@@ -857,7 +908,7 @@ class _TranslatePageState extends State<TranslatePage> {
                         'Translation will appear here...',
                         style: TextStyle(
                           color: cs.onSurface.withOpacity(0.4),
-                          fontSize: 14,
+                          fontSize: settings.fontSize,
                         ),
                       ),
                     ),

@@ -16,7 +16,7 @@ class SettingsPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      // backgroundColor: cs.surface, // Inherit from main theme (Alice Blue)
       appBar: AppBar(
         title: const Text('Settings'),
         centerTitle: true,
@@ -36,6 +36,13 @@ class SettingsPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Appearance section
+              _buildSectionHeader(context, 'Appearance'),
+              const SizedBox(height: 8),
+              _buildFontSizeTile(context, settings),
+              
+              const SizedBox(height: 24),
+
               // AI Providers section
               _buildSectionHeader(context, 'AI Providers'),
               const SizedBox(height: 8),
@@ -222,6 +229,53 @@ class SettingsPage extends StatelessWidget {
               icon: Icon(LucideIcons.trash2, size: 18),
               onPressed: () => settings.removeAction(action.id),
               tooltip: 'Delete',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildFontSizeTile(BuildContext context, SettingsProvider settings) {
+    final cs = Theme.of(context).colorScheme;
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(LucideIcons.type, size: 20, color: cs.onSurface),
+                    const SizedBox(width: 12),
+                    const Text('Font Size'),
+                  ],
+                ),
+                Text(
+                  '${settings.fontSize.toInt()} px',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+            Slider(
+              value: settings.fontSize,
+              min: 12.0,
+              max: 32.0,
+              divisions: 20,
+              label: settings.fontSize.round().toString(),
+              onChanged: (value) {
+                settings.setFontSize(value);
+              },
             ),
           ],
         ),
@@ -544,6 +598,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
   String? _testResult;
   String? _fetchError;
   bool _enabled = true;
+  bool _obscureKey = true;
 
   @override
   void initState() {
@@ -711,12 +766,19 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      // backgroundColor: cs.surface, // Inherit from main theme (Alice Blue)
       appBar: AppBar(
         title: Text(widget.existing == null ? 'Add Provider' : 'Edit Provider'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leadingWidth: 100,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 70),
+          child: BackButton(
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
         actions: [
           // Enable toggle in app bar
           Switch(
@@ -747,11 +809,23 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
               Expanded(
                 child: TextField(
                   controller: _keyController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
+                  obscureText: _obscureKey,
+                  decoration: InputDecoration(
                     labelText: 'API Key',
                     hintText: 'Your API key',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureKey ? LucideIcons.eye : LucideIcons.eyeOff,
+                        size: 20,
+                        color: cs.onSurface.withOpacity(0.5),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureKey = !_obscureKey;
+                        });
+                      },
+                    ),
                   ),
                 ),
               ),

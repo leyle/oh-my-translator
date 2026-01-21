@@ -17,6 +17,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _sourceLanguageKey = 'source_language';
   static const String _targetLanguageKey = 'target_language';
   static const String _defaultModeKey = 'default_mode';
+  static const String _fontSizeKey = 'font_size';
 
   SharedPreferences? _prefs;
   List<ProviderConfig> _providers = [];
@@ -25,6 +26,7 @@ class SettingsProvider extends ChangeNotifier {
   String _sourceLanguage = 'auto';
   String _targetLanguage = 'zh';
   TranslateMode _defaultMode = TranslateMode.translate;
+  double _fontSize = 16.0;
 
   final TranslationService _translationService;
 
@@ -39,6 +41,7 @@ class SettingsProvider extends ChangeNotifier {
   String get sourceLanguage => _sourceLanguage;
   String get targetLanguage => _targetLanguage;
   TranslateMode get defaultMode => _defaultMode;
+  double get fontSize => _fontSize;
   TranslationService get translationService => _translationService;
 
   /// Get the default provider (must be enabled)
@@ -88,6 +91,7 @@ class SettingsProvider extends ChangeNotifier {
     _defaultProviderId = _prefs!.getString(_defaultProviderKey);
     _sourceLanguage = _prefs!.getString(_sourceLanguageKey) ?? 'auto';
     _targetLanguage = _prefs!.getString(_targetLanguageKey) ?? 'zh';
+    _fontSize = _prefs!.getDouble(_fontSizeKey) ?? 16.0;
     
     final modeStr = _prefs!.getString(_defaultModeKey);
     if (modeStr != null) {
@@ -223,6 +227,12 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setDefaultMode(TranslateMode mode) async {
     _defaultMode = mode;
     await _prefs?.setString(_defaultModeKey, mode.name);
+    notifyListeners();
+  }
+
+  Future<void> setFontSize(double size) async {
+    _fontSize = size;
+    await _prefs?.setDouble(_fontSizeKey, size);
     notifyListeners();
   }
 

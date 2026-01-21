@@ -211,11 +211,52 @@ class _OhMyTranslatorAppState extends State<OhMyTranslatorApp> with TrayListener
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      scaffoldBackgroundColor: const Color(0xFFF0F7FF), // Alice Blue / Very Light Blue
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF6366F1), // Indigo
+        seedColor: const Color(0xFF1D4ED8), // Cobalt Blue / Blue 700
         brightness: Brightness.light,
+        surface: Colors.white,
       ),
       fontFamily: '.AppleSystemUIFont',
+      // Global Component Themes
+      popupMenuTheme: const PopupMenuThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+        elevation: 4,
+        textStyle: TextStyle(color: Color(0xFF1E293B), fontSize: 13), // Slate 800
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+        titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFFE2E8F0)), // Slate 200
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFFE2E8F0)), // Slate 200
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFF1D4ED8), width: 1.5), // Cobalt Blue
+        ),
+      ),
+      cardTheme: const CardThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 2,
+        shadowColor: Color(0x1A000000), // Soft shadow
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+        margin: EdgeInsets.zero,
+      ),
     );
   }
 
@@ -223,11 +264,52 @@ class _OhMyTranslatorAppState extends State<OhMyTranslatorApp> with TrayListener
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF1E293B), // Slate 800
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF6366F1), // Indigo
+        seedColor: const Color(0xFF3B82F6), // Blue 500
         brightness: Brightness.dark,
+        surface: const Color(0xFF0F172A), // Slate 900
       ),
       fontFamily: '.AppleSystemUIFont',
+      // Global Component Themes
+      popupMenuTheme: const PopupMenuThemeData(
+        color: Color(0xFF0F172A), // Slate 900
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+        elevation: 4,
+        textStyle: TextStyle(color: Color(0xFFF1F5F9), fontSize: 13), // Slate 100
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Color(0xFF0F172A), // Slate 900
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+        titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFF1F5F9)),
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: Color(0xFF0F172A), // Slate 900
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFF334155)), // Slate 700
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFF334155)), // Slate 700
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFF3B82F6), width: 1.5), // Blue 500
+        ),
+      ),
+      cardTheme: const CardThemeData(
+        color: Color(0xFF0F172A), // Slate 900
+        surfaceTintColor: Colors.transparent,
+        elevation: 2,
+        shadowColor: Color(0x4D000000),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+        margin: EdgeInsets.zero,
+      ),
     );
   }
 }

@@ -226,10 +226,17 @@ class TranslationProvider extends ChangeNotifier {
         mode: _mode,
       );
 
+      var lastNotifyTime = 0;
       _translationSubscription = stream.listen(
         (chunk) {
           _resultText += chunk;
-          notifyListeners();
+          
+          // Throttle UI updates to avoid jank with Markdown rendering
+          final now = DateTime.now().millisecondsSinceEpoch;
+          if (now - lastNotifyTime >= 50) { // 20fps cap
+            notifyListeners();
+            lastNotifyTime = now;
+          }
         },
         onDone: () {
           _state = TranslationState.completed;
@@ -240,7 +247,7 @@ class TranslationProvider extends ChangeNotifier {
           _lastKnownModelKey = _getCurrentModelKey();
           // Clear word explanation mode since we're in full sentence mode
           _isInWordExplanationMode = false;
-          notifyListeners();
+          notifyListeners(); // Ensure final state is updated
         },
         onError: (error) {
           _errorMessage = error.toString();
@@ -300,10 +307,17 @@ class TranslationProvider extends ChangeNotifier {
         targetLanguage: _targetLanguage,
       );
 
+      var lastNotifyTime = 0;
       _translationSubscription = stream.listen(
         (chunk) {
           _resultText += chunk;
-          notifyListeners();
+          
+          // Throttle UI updates
+          final now = DateTime.now().millisecondsSinceEpoch;
+          if (now - lastNotifyTime >= 50) {
+            notifyListeners();
+            lastNotifyTime = now;
+          }
         },
         onDone: () {
           _state = TranslationState.completed;
@@ -311,7 +325,7 @@ class TranslationProvider extends ChangeNotifier {
           _addToCache(cacheKey, _resultText);
           // Track model for change detection
           _lastKnownModelKey = _getCurrentModelKey();
-          notifyListeners();
+          notifyListeners(); // Ensure final complete state is shown
         },
         onError: (error) {
           _errorMessage = error.toString();

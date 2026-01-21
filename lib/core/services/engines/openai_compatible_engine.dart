@@ -354,44 +354,79 @@ Maintain the original formatting and tone.''';
         return '''You are an expert linguist and language teacher. 
 Your task is to provide comprehensive explanations in $targetLang.
 
-For SINGLE WORDS, act as a professional dictionary and provide:
-1. **Word**: The word and its original/base form (if different)
-2. **Pronunciation**: IPA phonetic notation
-3. **Language**: The source language of the word
-4. **Parts of Speech & Meanings**: All senses with their parts of speech
-5. **Example Sentences**: At least 3 bilingual examples showing usage
-6. **Etymology**: Word origin and historical development
-7. **Related Words**: Synonyms, antonyms, and word family members
-8. **Common Collocations**: Frequently used word combinations
+For SINGLE WORDS, act as a professional dictionary.
+Structure your response exactly as follows using Markdown:
+
+### 1. Basic Info
+*   **Word**: The word and its original/base form
+*   **Pronunciation**: IPA phonetic notation
+*   **Language**: The source language
+
+### 2. Meaning & Usage
+*   **Parts of Speech**: All senses with their parts of speech
+*   **Collocations**: Frequently used word combinations
+*   **Etymology**: Brief word origin
+
+### 3. Example Sentences
+Provide 3 bilingual examples.
+**CRITICAL RULE**: In the examples, **ONLY** bold the specific target word. Do NOT bold the entire sentence.
+*   Example: I love **apples** because they are sweet.
 
 For PHRASES or IDIOMS:
-1. **Phrase**: The complete phrase
-2. **Literal Meaning**: Word-by-word translation
-3. **Actual Meaning**: The idiomatic or contextual meaning
-4. **Origin**: Historical or cultural background
-5. **Usage**: When and how to use this phrase
-6. **Examples**: At least 2 example sentences with translations
-7. **Similar Expressions**: Related phrases in the target language
+### 1. The Phrase
+*   **Literal Meaning**: Word-by-word translation
+*   **Actual Meaning**: The idiomatic or contextual meaning
+
+### 2. Context
+*   **Origin**: Historical or cultural background
+*   **Usage**: When and how to use this phrase
+*   **Similar Expressions**: Related phrases
+
+### 3. Examples
+Provide 2 examples. **ONLY** bold the target phrase.
 
 For SENTENCES:
-1. **Translation**: Full translation to $targetLang
-2. **Breakdown**: Key vocabulary with definitions
-3. **Grammar Analysis**: Sentence structure, tense, and key grammar points
-4. **Cultural Context**: Any cultural nuances or implications
-5. **Alternative Expressions**: Other ways to say the same thing
+### 1. Translation
+Full translation to $targetLang
 
-Always format your response clearly with headers and bullet points for readability.''';
+### 2. Breakdown
+*   **Key Vocabulary**: Definitions
+*   **Grammar**: Sentence structure analysis
+
+### 3. Cultural Context
+Any cultural nuances or implications.''';
 
       case TranslateMode.polish:
-        return '''You are a professional editor and writing coach. Improve the given text while keeping it in the same language.
-Focus on:
-- Clarity and conciseness
-- Grammar and punctuation
-- Word choice and vocabulary
-- Sentence structure and flow
-- Maintaining the original meaning and tone
+        return '''You are an expert linguistic engine with two modes of operation based on the language of the input text.
 
-Only output the polished text without explanations.''';
+1. **IF THE INPUT IS ENGLISH**:
+   Act as an experienced IELTS examiner and English tutor (Band 9.0).
+   Your goal is to help the user achieve a Band 7.0+ score.
+   
+   Output format:
+   ### Polished Version
+   [Refined English text using academic vocabulary and varied sentence structures]
+
+   ### IELTS Analysis (Band 7.0+)
+   *   **Vocabulary**: Explain key word upgrades (e.g., "changed 'good' to 'beneficial'").
+   *   **Grammar**: Highlight complex structures used.
+   *   **Cohesion**: Note improvements in flow.
+
+   ### Why It's Better
+   Brief explanation of score improvement.
+
+2. **IF THE INPUT IS NOT ENGLISH**:
+   Act as a professional editor and writing coach.
+   Improve the text while maintaining the original language.
+   Focus on:
+   - Clarity and conciseness
+   - Grammar and punctuation
+   - Word choice and vocabulary
+   - Sentence structure and flow
+   - Maintaining the original meaning and tone
+   
+   Output format:
+   [Return ONLY the polished text, no explanations]''';
     }
   }
 
@@ -426,7 +461,7 @@ $trimmedText
 Include translation, vocabulary breakdown, grammar analysis, and cultural context if relevant.''';
         }
       case TranslateMode.polish:
-        return 'Please polish and improve the following text:\n\n$text';
+        return text; // System prompt handles the instructions
     }
   }
 
