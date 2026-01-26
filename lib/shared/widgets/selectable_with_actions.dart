@@ -66,13 +66,29 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
         onRunAction: _runAction,
         onCopy: _copyToClipboard,
         onDismiss: _hideOverlay,
+        onHover: _handleToolbarHover,
       ),
     );
     Overlay.of(context).insert(_overlayEntry!);
     print('Overlay inserted');
 
     // Auto-hide after 5 seconds of inactivity
+    _startHideTimer();
+  }
+
+  void _startHideTimer() {
+    _hideTimer?.cancel();
     _hideTimer = Timer(const Duration(seconds: 5), _hideOverlay);
+  }
+
+  void _handleToolbarHover(bool isHovering) {
+    if (isHovering) {
+      // Cancel auto-hide timer when hovering on toolbar
+      _hideTimer?.cancel();
+    } else {
+      // Restart auto-hide timer when leaving toolbar
+      _startHideTimer();
+    }
   }
 
   Future<void> _runAction(CustomAction action) async {
@@ -187,6 +203,7 @@ class _SelectionActionBar extends StatefulWidget {
     required this.onRunAction,
     required this.onCopy,
     required this.onDismiss,
+    required this.onHover,
   });
 
   final Offset position;
@@ -196,6 +213,7 @@ class _SelectionActionBar extends StatefulWidget {
   final Future<void> Function(CustomAction) onRunAction;
   final VoidCallback onCopy;
   final VoidCallback onDismiss;
+  final void Function(bool isHovering) onHover;
 
   @override
   State<_SelectionActionBar> createState() => _SelectionActionBarState();
@@ -259,10 +277,16 @@ class _SelectionActionBarState extends State<_SelectionActionBar> {
 
     return Positioned(
       left: (widget.position.dx - barWidth / 2).clamp(10, MediaQuery.of(context).size.width - barWidth - 10),
-      top: (widget.position.dy - 50).clamp(10, MediaQuery.of(context).size.height - 60),
+      top: (widget.position.dy - 60).clamp(10, MediaQuery.of(context).size.height - 60),
       child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovering = true),
-        onExit: (_) => setState(() => _isHovering = false),
+        onEnter: (_) {
+          setState(() => _isHovering = true);
+          widget.onHover(true);
+        },
+        onExit: (_) {
+          setState(() => _isHovering = false);
+          widget.onHover(false);
+        },
         child: TapRegion(
           onTapOutside: _isLoading ? null : (_) => widget.onDismiss(),
           child: Material(

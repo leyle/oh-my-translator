@@ -8,7 +8,7 @@ class HighlightTextEditingController extends TextEditingController {
 
   HighlightTextEditingController({
     String? text,
-    Color highlightColor = const Color(0xFFFFF3CD), // Light yellow like NextAI
+    Color highlightColor = const Color(0xFFB3D9FF), // Light blue to match theme
   })  : _highlightColor = highlightColor,
         super(text: text);
 

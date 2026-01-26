@@ -46,6 +46,7 @@ class _TranslatePageState extends State<TranslatePage> {
   Offset? _lastPointerPosition;
   final LayerLink _layerLink = LayerLink();
   TextSelection? _lastSelection; // Store selection range to restore after action
+  Timer? _selectionHideTimer; // Auto-hide timer for input area toolbar
   
   // For URL scheme handling
   late AppLinks _appLinks;
@@ -141,8 +142,22 @@ class _TranslatePageState extends State<TranslatePage> {
   }
   
   void _hideSelectionToolbar() {
+    _selectionHideTimer?.cancel();
     _selectionOverlay?.remove();
     _selectionOverlay = null;
+  }
+  
+  void _startSelectionHideTimer() {
+    _selectionHideTimer?.cancel();
+    _selectionHideTimer = Timer(const Duration(seconds: 5), _hideSelectionToolbar);
+  }
+  
+  void _handleInputToolbarHover(bool isHovering) {
+    if (isHovering) {
+      _selectionHideTimer?.cancel();
+    } else {
+      _startSelectionHideTimer();
+    }
   }
   
   void _restoreSelection() {
@@ -179,10 +194,14 @@ class _TranslatePageState extends State<TranslatePage> {
         onCopy: () => _copySelectedText(selectedText),
         onRunAction: (action) => _runCustomAction(action, selectedText),
         onDismiss: _hideSelectionToolbar,
+        onHover: _handleInputToolbarHover,
       ),
     );
     
     Overlay.of(context).insert(_selectionOverlay!);
+    
+    // Start auto-hide timer
+    _startSelectionHideTimer();
   }
   
   void _explainSelectedText(String selectedWord) {
@@ -215,6 +234,7 @@ class _TranslatePageState extends State<TranslatePage> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
+    _selectionHideTimer?.cancel();
     _hideSelectionToolbar();
     _inputController.removeListener(_onSelectionChanged);
     _inputController.dispose();
@@ -1023,6 +1043,7 @@ class _SelectionToolbar extends StatefulWidget {
     required this.onCopy,
     required this.onRunAction,
     required this.onDismiss,
+    required this.onHover,
   });
 
   final Offset position;
@@ -1032,6 +1053,7 @@ class _SelectionToolbar extends StatefulWidget {
   final VoidCallback onCopy;
   final Future<void> Function(CustomAction) onRunAction;
   final VoidCallback onDismiss;
+  final void Function(bool isHovering) onHover;
 
   @override
   State<_SelectionToolbar> createState() => _SelectionToolbarState();
@@ -1039,6 +1061,7 @@ class _SelectionToolbar extends StatefulWidget {
 
 class _SelectionToolbarState extends State<_SelectionToolbar> {
   String? _loadingActionId; // null = not loading, 'explain' or action.id = loading that item
+  bool _isHovering = false;
 
   Future<void> _handleExplain() async {
     setState(() => _loadingActionId = 'explain');
@@ -1072,9 +1095,18 @@ class _SelectionToolbarState extends State<_SelectionToolbar> {
 
     return Positioned(
       left: (widget.position.dx - toolbarWidth / 2).clamp(10, screenSize.width - toolbarWidth - 10),
-      top: (widget.position.dy - 50).clamp(10, screenSize.height - 60),
-      child: TapRegion(
-        onTapOutside: _loadingActionId != null ? null : (_) => widget.onDismiss(),
+      top: (widget.position.dy - 55).clamp(10, screenSize.height - 55),
+      child: MouseRegion(
+        onEnter: (_) {
+          setState(() => _isHovering = true);
+          widget.onHover(true);
+        },
+        onExit: (_) {
+          setState(() => _isHovering = false);
+          widget.onHover(false);
+        },
+        child: TapRegion(
+          onTapOutside: _loadingActionId != null ? null : (_) => widget.onDismiss(),
         child: Material(
           type: MaterialType.transparency,
           child: ClipRRect(
@@ -1135,6 +1167,7 @@ class _SelectionToolbarState extends State<_SelectionToolbar> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
