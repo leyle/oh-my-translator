@@ -360,6 +360,13 @@ class TranslationProvider extends ChangeNotifier {
     _state = TranslationState.idle;
     notifyListeners();
   }
+  
+  /// Set translation result directly (used for history restoration)
+  void setResult(String result) {
+    _resultText = result;
+    _state = TranslationState.completed;
+    notifyListeners();
+  }
 
   /// Execute a custom action on the result text
   Future<void> runAction(CustomAction action) async {

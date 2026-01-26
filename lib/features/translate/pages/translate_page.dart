@@ -11,6 +11,8 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../../core/models/custom_action.dart';
 import '../../../core/models/language.dart';
+import '../../../core/models/translation_history.dart';
+import '../../../core/providers/history_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/translation_provider.dart';
 import '../../../shared/widgets/highlight_text_controller.dart';
@@ -51,6 +53,9 @@ class _TranslatePageState extends State<TranslatePage> {
   // For URL scheme handling
   late AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
+  
+  // Track translation state for history recording
+  TranslationState? _lastTranslationState;
 
   @override
   void initState() {
@@ -63,6 +68,12 @@ class _TranslatePageState extends State<TranslatePage> {
     // Initialize URL scheme listener (omt://)
     _appLinks = AppLinks();
     _initDeepLinkListener();
+    
+    // Listen to translation state changes for history recording
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final translation = context.read<TranslationProvider>();
+      translation.addListener(() => _onTranslationStateChanged(translation));
+    });
 
     // Auto-translate if text was passed via CLI/PopClip
     if (widget.autoTranslate && widget.initialText != null) {
@@ -78,6 +89,23 @@ class _TranslatePageState extends State<TranslatePage> {
         translation.translate();
       });
     }
+  }
+  
+  void _onTranslationStateChanged(TranslationProvider translation) {
+    // Record to history when translation completes
+    if (_lastTranslationState == TranslationState.translating && 
+        translation.state == TranslationState.completed &&
+        translation.hasResult) {
+      final history = context.read<HistoryProvider>();
+      history.addEntry(
+        inputText: translation.sourceText,
+        outputText: translation.resultText,
+        sourceLanguage: translation.sourceLanguage,
+        targetLanguage: translation.targetLanguage,
+        mode: translation.mode.name,
+      );
+    }
+    _lastTranslationState = translation.state;
   }
   
   /// Initialize deep link listener for omt:// URLs
@@ -514,6 +542,12 @@ class _TranslatePageState extends State<TranslatePage> {
                 ),
               ),
             ),
+            // History button
+            IconButton(
+              icon: Icon(LucideIcons.history, size: 18, color: cs.onSurface.withOpacity(0.6)),
+              onPressed: () => _showHistoryDialog(context),
+              tooltip: 'History',
+            ),
             // Settings button on far right
             IconButton(
               icon: Icon(LucideIcons.settings, size: 18, color: cs.onSurface.withOpacity(0.6)),
@@ -845,95 +879,127 @@ class _TranslatePageState extends State<TranslatePage> {
 
     return Consumer<TranslationProvider>(
       builder: (context, translation, _) {
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cs.outline.withOpacity(0.1)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: translation.hasError
-              ? Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    translation.errorMessage,
-                    style: TextStyle(color: cs.error, fontSize: 14),
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outline.withOpacity(0.1)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                )
-              : translation.hasResult
-                  ? SelectableWithActions(
-                      child: Markdown(
-                        data: translation.resultText,
-                        padding: const EdgeInsets.all(16),
-                        shrinkWrap: true,
-                        styleSheet: MarkdownStyleSheet(
-                          p: TextStyle(fontSize: settings.fontSize, color: cs.onSurface, height: 1.6),
-                          // Headers - Keep colored for section separation but ensure high contrast
-                          h1: TextStyle(fontSize: settings.fontSize + 6, fontWeight: FontWeight.w800, color: cs.primary, letterSpacing: -0.5),
-                          h2: TextStyle(fontSize: settings.fontSize + 4, fontWeight: FontWeight.w700, color: cs.primary, letterSpacing: -0.5),
-                          h3: TextStyle(fontSize: settings.fontSize + 2, fontWeight: FontWeight.w600, color: cs.primary),
-                          h4: TextStyle(fontSize: settings.fontSize, fontWeight: FontWeight.w600, color: cs.primary),
-                          
-                          // Emphasis - Use Primary Color for selective highlighting (per user request)
-                          strong: TextStyle(fontWeight: FontWeight.bold, color: cs.primary), // Cobalt Blue for highlights
-                          em: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurface), // Standard for italics
-                          
-                          // Code
-                          code: TextStyle(
-                            backgroundColor: cs.surfaceContainerHighest.withOpacity(0.3),
-                            color: cs.onSurface, // Standard text color for code
-                            fontFamily: 'monospace',
-                            fontSize: (settings.fontSize - 1).clamp(12.0, 30.0),
-                          ),
-                          codeblockPadding: const EdgeInsets.all(12),
-                          codeblockDecoration: BoxDecoration(
-                            color: cs.surfaceContainerHighest.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: cs.outline.withOpacity(0.1)),
-                          ),
-                          
-                          // Quotes
-                          blockquote: TextStyle(color: cs.onSurface.withOpacity(0.8), fontStyle: FontStyle.italic),
-                          blockquotePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          blockquoteDecoration: BoxDecoration(
-                            border: Border(left: BorderSide(color: cs.primary.withOpacity(0.5), width: 4)),
-                            color: cs.surfaceContainerHighest.withOpacity(0.3),
-                            borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
-                          ),
-                          
-                          // Lists
-                          listBullet: TextStyle(color: cs.onSurface.withOpacity(0.7)),
-                          
-                          // Links
-                          a: TextStyle(color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary.withOpacity(0.3)),
-                          
-                          // Spacing
-                          blockSpacing: 12.0,
-                          horizontalRuleDecoration: BoxDecoration(
-                            border: Border(top: BorderSide(color: cs.outline.withOpacity(0.2))),
-                          ),
-                        ),
-                      ),
-                    )
-                  : Padding(
+                ],
+              ),
+              child: translation.hasError
+                  ? Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        'Translation will appear here...',
-                        style: TextStyle(
-                          color: cs.onSurface.withOpacity(0.4),
-                          fontSize: settings.fontSize,
-                        ),
+                        translation.errorMessage,
+                        style: TextStyle(color: cs.error, fontSize: 14),
                       ),
-                    ),
+                    )
+                  : translation.hasResult
+                      ? SelectableWithActions(
+                          child: Markdown(
+                            data: translation.resultText,
+                            padding: const EdgeInsets.all(16),
+                            shrinkWrap: true,
+                            styleSheet: MarkdownStyleSheet(
+                              p: TextStyle(fontSize: settings.fontSize, color: cs.onSurface, height: 1.6),
+                              // Headers - Keep colored for section separation but ensure high contrast
+                              h1: TextStyle(fontSize: settings.fontSize + 6, fontWeight: FontWeight.w800, color: cs.primary, letterSpacing: -0.5),
+                              h2: TextStyle(fontSize: settings.fontSize + 4, fontWeight: FontWeight.w700, color: cs.primary, letterSpacing: -0.5),
+                              h3: TextStyle(fontSize: settings.fontSize + 2, fontWeight: FontWeight.w600, color: cs.primary),
+                              h4: TextStyle(fontSize: settings.fontSize, fontWeight: FontWeight.w600, color: cs.primary),
+                              
+                              // Emphasis - Use Primary Color for selective highlighting (per user request)
+                              strong: TextStyle(fontWeight: FontWeight.bold, color: cs.primary), // Cobalt Blue for highlights
+                              em: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurface), // Standard for italics
+                              
+                              // Code
+                              code: TextStyle(
+                                backgroundColor: cs.surfaceContainerHighest.withOpacity(0.3),
+                                color: cs.onSurface, // Standard text color for code
+                                fontFamily: 'monospace',
+                                fontSize: (settings.fontSize - 1).clamp(12.0, 30.0),
+                              ),
+                              codeblockPadding: const EdgeInsets.all(12),
+                              codeblockDecoration: BoxDecoration(
+                                color: cs.surfaceContainerHighest.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: cs.outline.withOpacity(0.1)),
+                              ),
+                              
+                              // Quotes
+                              blockquote: TextStyle(color: cs.onSurface.withOpacity(0.8), fontStyle: FontStyle.italic),
+                              blockquotePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              blockquoteDecoration: BoxDecoration(
+                                border: Border(left: BorderSide(color: cs.primary.withOpacity(0.5), width: 4)),
+                                color: cs.surfaceContainerHighest.withOpacity(0.3),
+                                borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
+                              ),
+                              
+                              // Lists
+                              listBullet: TextStyle(color: cs.onSurface.withOpacity(0.7)),
+                              
+                              // Links
+                              a: TextStyle(color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary.withOpacity(0.3)),
+                              
+                              // Spacing
+                              blockSpacing: 12.0,
+                              horizontalRuleDecoration: BoxDecoration(
+                                border: Border(top: BorderSide(color: cs.outline.withOpacity(0.2))),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            'Translation will appear here...',
+                            style: TextStyle(
+                              color: cs.onSurface.withOpacity(0.4),
+                              fontSize: settings.fontSize,
+                            ),
+                          ),
+                        ),
+            ),
+            // Copy button - only show when there's result
+            if (translation.hasResult)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  icon: Icon(LucideIcons.copy, size: 16, color: cs.onSurface.withOpacity(0.5)),
+                  onPressed: () => _copyOutputText(translation.resultText),
+                  tooltip: 'Copy',
+                  style: IconButton.styleFrom(
+                    backgroundColor: cs.surface.withOpacity(0.8),
+                    padding: const EdgeInsets.all(6),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ),
+          ],
         );
       },
+    );
+  }
+  
+  void _copyOutputText(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Copied to clipboard'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -986,6 +1052,332 @@ class _TranslatePageState extends State<TranslatePage> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const SettingsPage(),
+      ),
+    );
+  }
+  
+  void _showHistoryDialog(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => _ResizableHistoryDialog(
+        onItemTap: (item) {
+          final translation = context.read<TranslationProvider>();
+          _inputController.text = item.inputText;
+          translation.setSourceText(item.inputText);
+          translation.setSourceLanguage(item.sourceLanguage);
+          translation.setTargetLanguage(item.targetLanguage);
+          if (item.mode == 'translate') {
+            translation.setMode(TranslateMode.translate);
+          } else {
+            translation.setMode(TranslateMode.polish);
+          }
+          translation.setResult(item.outputText);
+          Navigator.of(dialogContext).pop();
+        },
+      ),
+    );
+  }
+}
+
+/// Resizable history dialog widget
+class _ResizableHistoryDialog extends StatefulWidget {
+  final void Function(TranslationHistoryItem item) onItemTap;
+  
+  const _ResizableHistoryDialog({required this.onItemTap});
+  
+  @override
+  State<_ResizableHistoryDialog> createState() => _ResizableHistoryDialogState();
+}
+
+class _ResizableHistoryDialogState extends State<_ResizableHistoryDialog> {
+  double? _width;
+  double? _height;
+  
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final screenSize = MediaQuery.of(context).size;
+    
+    // Default to 80% of window size
+    _width ??= screenSize.width * 0.8;
+    _height ??= screenSize.height * 0.8;
+    
+    return Dialog(
+      child: Container(
+        width: _width,
+        height: _height,
+        constraints: BoxConstraints(
+          minWidth: 350,
+          minHeight: 250,
+          maxWidth: screenSize.width * 0.95,
+          maxHeight: screenSize.height * 0.95,
+        ),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
+                  child: Row(
+                    children: [
+                      Icon(LucideIcons.history, size: 20, color: cs.primary),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Translation History',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      ),
+                      const Spacer(),
+                      Consumer<HistoryProvider>(
+                        builder: (context, history, _) => Text(
+                          '${history.count}/${history.maxSize}',
+                          style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.5)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: cs.outline.withOpacity(0.1)),
+                // Content
+                Expanded(
+                  child: Consumer<HistoryProvider>(
+                    builder: (context, history, _) {
+                      if (history.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.inbox, size: 48, color: cs.onSurface.withOpacity(0.3)),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No translation history yet',
+                                style: TextStyle(color: cs.onSurface.withOpacity(0.5)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      return ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: history.history.length,
+                        separatorBuilder: (_, __) => Divider(color: cs.outline.withOpacity(0.1)),
+                        itemBuilder: (context, index) {
+                          final item = history.history[index];
+                          return _HistoryItemTile(
+                            item: item,
+                            onTap: () => widget.onItemTap(item),
+                            onDelete: () => history.removeEntry(item.id),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                // Actions
+                Divider(height: 1, color: cs.outline.withOpacity(0.1)),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {
+                          final history = context.read<HistoryProvider>();
+                          if (history.count > 0) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Clear History?'),
+                                content: const Text('This will delete all translation history.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      history.clearHistory();
+                                      Navigator.of(ctx).pop();
+                                    },
+                                    child: Text('Clear', style: TextStyle(color: cs.error)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                        child: Text('Clear All', style: TextStyle(color: cs.error)),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Resize handle (bottom-right corner)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onPanUpdate: (details) {
+                  final screenSize = MediaQuery.of(context).size;
+                  setState(() {
+                    _width = (_width! + details.delta.dx).clamp(350.0, screenSize.width * 0.95);
+                    _height = (_height! + details.delta.dy).clamp(250.0, screenSize.height * 0.95);
+                  });
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.resizeDownRight,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    alignment: Alignment.bottomRight,
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      LucideIcons.gripHorizontal,
+                      size: 14,
+                      color: cs.onSurface.withOpacity(0.4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Individual history item with delete button
+class _HistoryItemTile extends StatefulWidget {
+  final TranslationHistoryItem item;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+  
+  const _HistoryItemTile({
+    required this.item,
+    required this.onTap,
+    required this.onDelete,
+  });
+  
+  @override
+  State<_HistoryItemTile> createState() => _HistoryItemTileState();
+}
+
+class _HistoryItemTileState extends State<_HistoryItemTile> {
+  bool _isHovered = false;
+  
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final diff = now.difference(timestamp);
+    
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${timestamp.month}/${timestamp.day}';
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final item = widget.item;
+    
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Input
+                    Row(
+                      children: [
+                        Icon(LucideIcons.fileInput, size: 12, color: cs.primary.withOpacity(0.7)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            item.inputText,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13, color: cs.onSurface),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Output
+                    Row(
+                      children: [
+                        Icon(LucideIcons.fileOutput, size: 12, color: cs.onSurface.withOpacity(0.5)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            item.outputText,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Metadata
+                    Row(
+                      children: [
+                        Text(
+                          '${item.sourceLanguage} → ${item.targetLanguage}',
+                          style: TextStyle(fontSize: 10, color: cs.onSurface.withOpacity(0.4)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '• ${item.mode}',
+                          style: TextStyle(fontSize: 10, color: cs.onSurface.withOpacity(0.4)),
+                        ),
+                        const Spacer(),
+                        Text(
+                          _formatTimestamp(item.timestamp),
+                          style: TextStyle(fontSize: 10, color: cs.onSurface.withOpacity(0.4)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Delete button - only visible on hover
+              AnimatedOpacity(
+                opacity: _isHovered ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 150),
+                child: IconButton(
+                  icon: Icon(LucideIcons.trash2, size: 16, color: cs.error.withOpacity(0.7)),
+                  onPressed: widget.onDelete,
+                  tooltip: 'Delete',
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

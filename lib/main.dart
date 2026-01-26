@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'core/providers/history_provider.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/translation_provider.dart';
 import 'core/services/cli_args_handler.dart';
@@ -172,9 +173,12 @@ class _OhMyTranslatorAppState extends State<OhMyTranslatorApp> with TrayListener
   Widget build(BuildContext context) {
     final settingsProvider = SettingsProvider()..init();
     
+    final historyProvider = HistoryProvider()..init();
+    
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: settingsProvider),
+        ChangeNotifierProvider.value(value: historyProvider),
         ChangeNotifierProvider(
           create: (_) => TranslationProvider(
             translationService: settingsProvider.translationService,
