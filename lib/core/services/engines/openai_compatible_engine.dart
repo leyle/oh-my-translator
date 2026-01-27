@@ -341,13 +341,64 @@ Include translations for each example.''';
     return headers;
   }
 
+  /// Get language-specific translation guidance
+  String _getLanguageGuidance(String targetLang) {
+    // Provide specific guidance for certain target languages
+    final langLower = targetLang.toLowerCase();
+    
+    if (langLower.contains('chinese') || langLower == 'zh' || langLower == 'zh-tw') {
+      return '''
+- Use contemporary, natural Chinese expressions that native speakers commonly use
+- For technical terms (especially AI/tech), prefer widely-adopted Chinese translations:
+  * "agentic AI" → "智能体AI" or "AI智能体" (not "代理式AI")
+  * "large language model" → "大语言模型" or "大模型"
+  * "machine learning" → "机器学习"
+  * "neural network" → "神经网络"
+- Maintain proper Chinese punctuation (。，！？etc.)
+- Ensure the translation reads naturally to native Chinese speakers''';
+    }
+    
+    if (langLower.contains('japanese') || langLower == 'ja') {
+      return '''
+- Use natural Japanese expressions appropriate to the context
+- Choose between formal (です/ます) or casual form based on the source text's tone
+- Use appropriate kanji vs hiragana balance for readability
+- Maintain proper Japanese punctuation''';
+    }
+    
+    if (langLower.contains('korean') || langLower == 'ko') {
+      return '''
+- Use natural Korean expressions
+- Match the formality level of the source text
+- Use appropriate Hangul and proper spacing''';
+    }
+    
+    // Default guidance for other languages
+    return '''
+- Use natural, idiomatic expressions that native speakers would use
+- Maintain appropriate formality level based on the source text''';
+  }
+
   String _buildSystemPrompt(TranslateMode mode, String sourceLang, String targetLang) {
     switch (mode) {
       case TranslateMode.translate:
-        return '''You are a professional translator. Translate the given text from $sourceLang to $targetLang.
-Only output the translated text, no explanations or additional content.
-If the source language is 'auto', detect the language automatically.
-Maintain the original formatting and tone.''';
+        final languageGuidance = _getLanguageGuidance(targetLang);
+        return '''You are an expert translator with deep fluency in both $sourceLang and $targetLang.
+
+Your task: Translate the given text from $sourceLang to $targetLang.
+
+Translation guidelines:
+- Produce natural, idiomatic translations that sound native
+- Preserve the original meaning, tone, and intent precisely
+- Use terminology and expressions that native $targetLang speakers commonly use
+- Do NOT translate literally if it would sound unnatural
+$languageGuidance
+
+Output rules:
+- Return ONLY the translated text
+- No explanations, notes, or additional commentary
+- Maintain original formatting (paragraphs, line breaks, etc.)
+- Include proper punctuation appropriate for $targetLang''';
 
       case TranslateMode.explain:
         // Enhanced context-aware explanation
