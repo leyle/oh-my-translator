@@ -79,11 +79,18 @@ class _TranslatePageState extends State<TranslatePage> {
     if (widget.autoTranslate && widget.initialText != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final translation = context.read<TranslationProvider>();
+        final settings = context.read<SettingsProvider>();
         translation.setSourceText(widget.initialText!);
         
-        // Set target language if provided
+        // Set target language if provided, otherwise apply smart swap
         if (widget.targetLanguage != null) {
           translation.setTargetLanguage(widget.targetLanguage!);
+        } else if (settings.smartSwapEnabled && translation.sourceLanguage == 'auto') {
+          final detectedLanguage = LanguageDetector.detect(widget.initialText!);
+          final smartTarget = settings.getSmartTargetLanguage(detectedLanguage);
+          if (smartTarget != null) {
+            translation.setTargetLanguage(smartTarget);
+          }
         }
         
         translation.translate();
@@ -148,10 +155,19 @@ class _TranslatePageState extends State<TranslatePage> {
       if (!mounted) return;
       
       final translation = context.read<TranslationProvider>();
+      final settings = context.read<SettingsProvider>();
       translation.setSourceText(text);
       
       if (targetLang != null && targetLang.isNotEmpty) {
+        // Explicit target language from URL overrides smart swap
         translation.setTargetLanguage(targetLang);
+      } else if (settings.smartSwapEnabled && translation.sourceLanguage == 'auto') {
+        // Apply smart swap if enabled and no explicit target
+        final detectedLanguage = LanguageDetector.detect(text);
+        final smartTarget = settings.getSmartTargetLanguage(detectedLanguage);
+        if (smartTarget != null) {
+          translation.setTargetLanguage(smartTarget);
+        }
       }
       
       translation.translate();
@@ -270,6 +286,30 @@ class _TranslatePageState extends State<TranslatePage> {
     super.dispose();
   }
 
+  /// Perform translation with smart language swap.
+  /// If smart swap is enabled and source is 'auto', detects input language
+  /// and automatically sets the target language.
+  void _performTranslation() {
+    final translation = context.read<TranslationProvider>();
+    final settings = context.read<SettingsProvider>();
+    final text = _inputController.text;
+    
+    translation.setSourceText(text);
+    
+    // Apply smart swap if enabled and source is auto-detect
+    if (settings.smartSwapEnabled && translation.sourceLanguage == 'auto' && text.isNotEmpty) {
+      final detectedLanguage = LanguageDetector.detect(text);
+      final smartTarget = settings.getSmartTargetLanguage(detectedLanguage);
+      
+      if (smartTarget != null) {
+        translation.setTargetLanguage(smartTarget);
+      }
+    }
+    
+    translation.translate();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -283,9 +323,7 @@ class _TranslatePageState extends State<TranslatePage> {
         actions: {
           TranslateIntent: CallbackAction<TranslateIntent>(
             onInvoke: (_) {
-              final translation = context.read<TranslationProvider>();
-              translation.setSourceText(_inputController.text);
-              translation.translate();
+              _performTranslation();
               return null;
             },
           ),
@@ -836,10 +874,7 @@ class _TranslatePageState extends State<TranslatePage> {
             child: FilledButton.icon(
               onPressed: isTranslating
                   ? () => translation.stopTranslation()
-                  : () {
-                      translation.setSourceText(_inputController.text);
-                      translation.translate();
-                    },
+                  : () => _performTranslation(),
               icon: isTranslating
                   ? SizedBox(
                       width: 16,

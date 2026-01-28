@@ -18,6 +18,9 @@ class SettingsProvider extends ChangeNotifier {
   static const String _targetLanguageKey = 'target_language';
   static const String _defaultModeKey = 'default_mode';
   static const String _fontSizeKey = 'font_size';
+  static const String _nativeLanguageKey = 'native_language';
+  static const String _secondaryLanguageKey = 'secondary_language';
+  static const String _smartSwapEnabledKey = 'smart_swap_enabled';
 
   SharedPreferences? _prefs;
   List<ProviderConfig> _providers = [];
@@ -26,6 +29,9 @@ class SettingsProvider extends ChangeNotifier {
   String _sourceLanguage = 'auto';
   String _targetLanguage = 'zh';
   TranslateMode _defaultMode = TranslateMode.translate;
+  String _nativeLanguage = 'zh';
+  String _secondaryLanguage = 'en';
+  bool _smartSwapEnabled = false;
   double _fontSize = 16.0;
 
   final TranslationService _translationService;
@@ -43,6 +49,9 @@ class SettingsProvider extends ChangeNotifier {
   TranslateMode get defaultMode => _defaultMode;
   double get fontSize => _fontSize;
   TranslationService get translationService => _translationService;
+  String get nativeLanguage => _nativeLanguage;
+  String get secondaryLanguage => _secondaryLanguage;
+  bool get smartSwapEnabled => _smartSwapEnabled;
 
   /// Get the default provider (must be enabled)
   ProviderConfig? get defaultProvider {
@@ -92,6 +101,9 @@ class SettingsProvider extends ChangeNotifier {
     _sourceLanguage = _prefs!.getString(_sourceLanguageKey) ?? 'auto';
     _targetLanguage = _prefs!.getString(_targetLanguageKey) ?? 'zh';
     _fontSize = _prefs!.getDouble(_fontSizeKey) ?? 16.0;
+    _nativeLanguage = _prefs!.getString(_nativeLanguageKey) ?? 'zh';
+    _secondaryLanguage = _prefs!.getString(_secondaryLanguageKey) ?? 'en';
+    _smartSwapEnabled = _prefs!.getBool(_smartSwapEnabledKey) ?? false;
     
     final modeStr = _prefs!.getString(_defaultModeKey);
     if (modeStr != null) {
@@ -234,6 +246,43 @@ class SettingsProvider extends ChangeNotifier {
     _fontSize = size;
     await _prefs?.setDouble(_fontSizeKey, size);
     notifyListeners();
+  }
+
+  Future<void> setNativeLanguage(String code) async {
+    _nativeLanguage = code;
+    await _prefs?.setString(_nativeLanguageKey, code);
+    notifyListeners();
+  }
+
+  Future<void> setSecondaryLanguage(String code) async {
+    _secondaryLanguage = code;
+    await _prefs?.setString(_secondaryLanguageKey, code);
+    notifyListeners();
+  }
+
+  Future<void> setSmartSwapEnabled(bool enabled) async {
+    _smartSwapEnabled = enabled;
+    await _prefs?.setBool(_smartSwapEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  /// Get the appropriate target language based on detected input language.
+  /// Returns null if smart swap is disabled or detection doesn't match.
+  String? getSmartTargetLanguage(String detectedLanguage) {
+    if (!_smartSwapEnabled) return null;
+    
+    // Check if detected matches native or secondary
+    if (detectedLanguage == _nativeLanguage || 
+        (detectedLanguage == 'zh' && _nativeLanguage == 'zh-TW') ||
+        (detectedLanguage == 'zh-TW' && _nativeLanguage == 'zh')) {
+      // Native language detected -> translate to secondary
+      return _secondaryLanguage;
+    } else if (detectedLanguage == _secondaryLanguage) {
+      // Secondary language detected -> translate to native
+      return _nativeLanguage;
+    }
+    
+    return null;
   }
 
   @override

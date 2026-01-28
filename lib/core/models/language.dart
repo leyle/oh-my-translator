@@ -86,3 +86,120 @@ class SupportedLanguages {
   static const Language chinese = Language(code: 'zh', name: 'Chinese', nativeName: '中文');
   static const Language auto = Language(code: 'auto', name: 'Auto Detect', nativeName: 'Auto');
 }
+
+/// Simple heuristic-based language detector using character patterns.
+/// This doesn't require an API call and works for common use cases.
+class LanguageDetector {
+  /// Detect the likely language of the input text.
+  /// Returns a language code like 'en', 'zh', 'ja', 'ko', etc.
+  /// Falls back to 'en' if uncertain.
+  static String detect(String text) {
+    if (text.trim().isEmpty) return 'en';
+    
+    // Count character types
+    int cjkCount = 0;      // Chinese/Japanese/Korean
+    int japaneseCount = 0; // Hiragana/Katakana
+    int koreanCount = 0;   // Hangul
+    int arabicCount = 0;
+    int thaiCount = 0;
+    int devanagariCount = 0; // Hindi
+    int cyrillicCount = 0;   // Russian
+    int latinCount = 0;
+    int total = 0;
+    
+    for (int i = 0; i < text.length; i++) {
+      final code = text.codeUnitAt(i);
+      
+      // Skip whitespace and punctuation
+      if (code <= 0x40 || (code >= 0x5B && code <= 0x60) || (code >= 0x7B && code <= 0x7F)) {
+        continue;
+      }
+      
+      total++;
+      
+      // CJK Unified Ideographs (Chinese characters, also used in Japanese)
+      if ((code >= 0x4E00 && code <= 0x9FFF) ||
+          (code >= 0x3400 && code <= 0x4DBF) ||
+          (code >= 0x20000 && code <= 0x2A6DF)) {
+        cjkCount++;
+      }
+      // Japanese Hiragana
+      else if (code >= 0x3040 && code <= 0x309F) {
+        japaneseCount++;
+      }
+      // Japanese Katakana
+      else if (code >= 0x30A0 && code <= 0x30FF) {
+        japaneseCount++;
+      }
+      // Korean Hangul
+      else if ((code >= 0xAC00 && code <= 0xD7AF) ||
+               (code >= 0x1100 && code <= 0x11FF) ||
+               (code >= 0x3130 && code <= 0x318F)) {
+        koreanCount++;
+      }
+      // Arabic
+      else if (code >= 0x0600 && code <= 0x06FF) {
+        arabicCount++;
+      }
+      // Thai
+      else if (code >= 0x0E00 && code <= 0x0E7F) {
+        thaiCount++;
+      }
+      // Devanagari (Hindi)
+      else if (code >= 0x0900 && code <= 0x097F) {
+        devanagariCount++;
+      }
+      // Cyrillic (Russian)
+      else if (code >= 0x0400 && code <= 0x04FF) {
+        cyrillicCount++;
+      }
+      // Basic Latin
+      else if ((code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A)) {
+        latinCount++;
+      }
+    }
+    
+    if (total == 0) return 'en';
+    
+    // Determine language based on character distribution
+    final threshold = total * 0.3; // 30% threshold
+    
+    // Japanese has hiragana/katakana mixed with kanji
+    if (japaneseCount > 0 && (japaneseCount + cjkCount) > threshold) {
+      return 'ja';
+    }
+    
+    // Korean
+    if (koreanCount > threshold) {
+      return 'ko';
+    }
+    
+    // Chinese (high CJK without Japanese kana)
+    if (cjkCount > threshold && japaneseCount == 0) {
+      return 'zh';
+    }
+    
+    // Arabic
+    if (arabicCount > threshold) {
+      return 'ar';
+    }
+    
+    // Thai
+    if (thaiCount > threshold) {
+      return 'th';
+    }
+    
+    // Hindi
+    if (devanagariCount > threshold) {
+      return 'hi';
+    }
+    
+    // Russian
+    if (cyrillicCount > threshold) {
+      return 'ru';
+    }
+    
+    // Default to English for Latin-based text
+    return 'en';
+  }
+}

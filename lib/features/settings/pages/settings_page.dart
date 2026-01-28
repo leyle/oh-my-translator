@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/provider_config.dart';
 import '../../../core/models/custom_action.dart';
+import '../../../core/models/language.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/engines/openai_compatible_engine.dart';
 
@@ -40,6 +41,13 @@ class SettingsPage extends StatelessWidget {
               _buildSectionHeader(context, 'Appearance'),
               const SizedBox(height: 8),
               _buildFontSizeTile(context, settings),
+              
+              const SizedBox(height: 24),
+              
+              // Language Preferences section
+              _buildSectionHeader(context, 'Language Preferences'),
+              const SizedBox(height: 8),
+              _buildSmartSwapSettings(context, settings),
               
               const SizedBox(height: 24),
 
@@ -283,6 +291,126 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  Widget _buildSmartSwapSettings(BuildContext context, SettingsProvider settings) {
+    final cs = Theme.of(context).colorScheme;
+    // Exclude 'auto' from language options
+    final languages = SupportedLanguages.all.where((l) => l.code != 'auto').toList();
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Smart swap toggle
+            Row(
+              children: [
+                Icon(LucideIcons.shuffle, size: 20, color: cs.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Smart Language Swap',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        'Auto-detect input and set target language',
+                        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: settings.smartSwapEnabled,
+                  onChanged: (value) => settings.setSmartSwapEnabled(value),
+                ),
+              ],
+            ),
+            
+            // Language dropdowns (only visible when enabled)
+            if (settings.smartSwapEnabled) ...[
+              const Divider(height: 24),
+              
+              // Native language
+              Row(
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      'Native Language',
+                      style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8)),
+                    ),
+                  ),
+                  Expanded(
+                    child: DropdownButton<String>(
+                      value: settings.nativeLanguage,
+                      isExpanded: true,
+                      underline: Container(
+                        height: 1,
+                        color: cs.outline.withOpacity(0.3),
+                      ),
+                      items: languages.map((lang) {
+                        return DropdownMenuItem<String>(
+                          value: lang.code,
+                          child: Text('${lang.name} (${lang.nativeName})'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) settings.setNativeLanguage(value);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Secondary language
+              Row(
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      'Secondary Language',
+                      style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8)),
+                    ),
+                  ),
+                  Expanded(
+                    child: DropdownButton<String>(
+                      value: settings.secondaryLanguage,
+                      isExpanded: true,
+                      underline: Container(
+                        height: 1,
+                        color: cs.outline.withOpacity(0.3),
+                      ),
+                      items: languages.map((lang) {
+                        return DropdownMenuItem<String>(
+                          value: lang.code,
+                          child: Text('${lang.name} (${lang.nativeName})'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) settings.setSecondaryLanguage(value);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8),
+              Text(
+                '• Native input → translates to Secondary\n• Secondary input → translates to Native',
+                style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.5)),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildAddButton(BuildContext context, String label, VoidCallback onPressed) {
     final cs = Theme.of(context).colorScheme;
 
@@ -318,7 +446,7 @@ class SettingsPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Version 1.0.0',
+              'Version 1.1.0',
               style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
             ),
             const SizedBox(height: 4),
