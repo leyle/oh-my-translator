@@ -973,7 +973,7 @@ class _TranslatePageState extends State<TranslatePage> {
             // Copy button - only show when there's result
             if (translation.hasResult)
               Positioned(
-                top: 8,
+                bottom: 8,
                 right: 8,
                 child: IconButton(
                   icon: Icon(LucideIcons.copy, size: 16, color: cs.onSurface.withOpacity(0.5)),
