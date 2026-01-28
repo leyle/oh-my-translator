@@ -5,12 +5,34 @@ import 'package:flutter/material.dart';
 class HighlightTextEditingController extends TextEditingController {
   TextRange? _highlightRange;
   Color _highlightColor;
+  String? _lastText;
 
   HighlightTextEditingController({
     String? text,
     Color highlightColor = const Color(0xFFB3D9FF), // Light blue to match theme
   })  : _highlightColor = highlightColor,
-        super(text: text);
+        _lastText = text,
+        super(text: text) {
+    // Clear highlight when text content changes (e.g., paste, delete, new input)
+    addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    if (text != _lastText) {
+      _lastText = text;
+      // Clear stale highlight when text content changes
+      if (_highlightRange != null) {
+        _highlightRange = null;
+        // Note: don't call notifyListeners() here since we're already in a listener
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    removeListener(_onTextChanged);
+    super.dispose();
+  }
 
   /// Set the range to highlight
   void setHighlight(int start, int end) {

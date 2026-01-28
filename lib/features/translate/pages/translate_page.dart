@@ -17,6 +17,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/translation_provider.dart';
 import '../../../shared/widgets/highlight_text_controller.dart';
 import '../../../shared/widgets/selectable_with_actions.dart';
+import '../../../shared/widgets/toast.dart';
 import '../../settings/pages/settings_page.dart';
 
 class TranslatePage extends StatefulWidget {
@@ -266,13 +267,7 @@ class _TranslatePageState extends State<TranslatePage> {
     Clipboard.setData(ClipboardData(text: text));
     _restoreSelection();
     _hideSelectionToolbar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copied to clipboard'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    Toast.show(context, 'Copied');
   }
 
   @override
@@ -841,22 +836,12 @@ class _TranslatePageState extends State<TranslatePage> {
       
       if (result.exitCode != 0 && mounted) {
         final stderr = result.stderr.toString().trim();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${action.name} error: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Toast.error(context, '${action.name}: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}');
       }
     } catch (e) {
       _restoreSelection();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to run ${action.name}: $e'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Toast.error(context, 'Failed: ${action.name}');
       }
     }
   }
@@ -1029,13 +1014,7 @@ class _TranslatePageState extends State<TranslatePage> {
   
   void _copyOutputText(String text) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copied to clipboard'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    Toast.show(context, 'Copied');
   }
 
   Widget _buildActionsBar(BuildContext context, TranslationProvider translation) {
@@ -1505,7 +1484,10 @@ class _SelectionToolbarState extends State<_SelectionToolbar> {
     } finally {
       if (mounted) {
         setState(() => _loadingActionId = null);
-        widget.onDismiss();
+        // Only auto-dismiss if not hovering
+        if (!_isHovering) {
+          widget.onDismiss();
+        }
       }
     }
   }

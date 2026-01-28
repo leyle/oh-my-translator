@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/models/custom_action.dart';
+import 'toast.dart';
 
 /// A wrapper widget that provides a floating action bar when text is selected.
 /// Shows Copy and configured custom actions (shell scripts).
@@ -105,21 +106,11 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
       
       if (result.exitCode != 0 && mounted) {
         final stderr = result.stderr.toString().trim();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${action.name} error: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Toast.error(context, '${action.name}: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to run ${action.name}: $e'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Toast.error(context, 'Failed: ${action.name}');
       }
     }
   }
@@ -129,13 +120,7 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
     Clipboard.setData(ClipboardData(text: _selectedText!));
     _hideOverlay();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Copied to clipboard'),
-          duration: Duration(seconds: 1),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      Toast.show(context, 'Copied');
     }
   }
 
