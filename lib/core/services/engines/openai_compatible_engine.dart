@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../../models/language.dart';
@@ -39,7 +38,8 @@ class OpenAICompatibleEngine extends BaseEngine {
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        final response = await client.get(Uri.parse(url), headers: headers)
+        final response = await client
+            .get(Uri.parse(url), headers: headers)
             .timeout(const Duration(seconds: 15));
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -51,24 +51,25 @@ class OpenAICompatibleEngine extends BaseEngine {
                 ModelInfo(
                   id: m['id'] as String,
                   displayName: m['id'] as String,
-                )
+                ),
           ];
         }
         return [];
       } catch (e) {
         print('Error fetching models (attempt $attempt/$maxRetries): $e');
-        
-        final isRetryable = e.toString().contains('HandshakeException') ||
+
+        final isRetryable =
+            e.toString().contains('HandshakeException') ||
             e.toString().contains('Connection terminated') ||
             e.toString().contains('SocketException') ||
             e.toString().contains('Connection reset');
-        
+
         if (attempt < maxRetries && isRetryable) {
           await Future.delayed(Duration(seconds: attempt));
           print('Retrying fetch models...');
           continue;
         }
-        
+
         return [];
       }
     }
@@ -82,57 +83,70 @@ class OpenAICompatibleEngine extends BaseEngine {
     required String targetLanguage,
     required TranslateMode mode,
   }) async* {
-    final systemPrompt = _buildSystemPrompt(mode, sourceLanguage, targetLanguage);
-    final userPrompt = _buildUserPrompt(mode, text, sourceLanguage, targetLanguage);
+    final systemPrompt = _buildSystemPrompt(
+      mode,
+      sourceLanguage,
+      targetLanguage,
+    );
+    final userPrompt = _buildUserPrompt(
+      mode,
+      text,
+      sourceLanguage,
+      targetLanguage,
+    );
 
     final url = _buildChatCompletionsUrl();
     final headers = _buildHeaders();
-    final body = jsonEncode({
+    var requestPayload = <String, dynamic>{
       'model': config.model,
       'messages': [
         {'role': 'system', 'content': systemPrompt},
         {'role': 'user', 'content': userPrompt},
       ],
       'stream': true,
-      'temperature': 0.3,
-    });
+    };
+    if (_supportsCustomTemperature(config.model)) {
+      requestPayload['temperature'] = 0.3;
+    }
+    var body = jsonEncode(requestPayload);
 
     print('Making request to: $url');
     print('With model: ${config.model}');
 
-    final request = http.Request('POST', Uri.parse(url))
-      ..headers.addAll(headers)
-      ..body = body;
-
     http.StreamedResponse? response;
     const maxRetries = 3;
-    
+
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // Need to recreate request for each retry since it's consumed after send
         final retryRequest = http.Request('POST', Uri.parse(url))
           ..headers.addAll(headers)
           ..body = body;
-        
-        response = await client.send(retryRequest).timeout(const Duration(seconds: 60));
+
+        response = await client
+            .send(retryRequest)
+            .timeout(const Duration(seconds: 60));
         break; // Success, exit retry loop
       } catch (e) {
         print('Request error (attempt $attempt/$maxRetries): $e');
-        
+
         // Check if it's a retryable error
-        final isRetryable = e.toString().contains('HandshakeException') ||
+        final isRetryable =
+            e.toString().contains('HandshakeException') ||
             e.toString().contains('Connection terminated') ||
             e.toString().contains('SocketException') ||
             e.toString().contains('Connection reset');
-        
+
         if (attempt < maxRetries && isRetryable) {
           // Wait before retry with exponential backoff
           await Future.delayed(Duration(seconds: attempt));
           print('Retrying...');
           continue;
         }
-        
-        throw TranslationException(message: 'Connection failed after $attempt attempts: $e');
+
+        throw TranslationException(
+          message: 'Connection failed after $attempt attempts: $e',
+        );
       }
     }
 
@@ -144,20 +158,46 @@ class OpenAICompatibleEngine extends BaseEngine {
     print('Response status: ${response.statusCode}');
 
     if (response.statusCode != 200) {
-      final responseBody = await response.stream.bytesToString();
-      print('Error response: $responseBody');
-      throw TranslationException(
-        message: 'API request failed',
-        statusCode: response.statusCode,
-        responseBody: responseBody,
-      );
+      var responseBody = await response.stream.bytesToString();
+
+      if (_shouldRetryWithoutTemperature(
+        response.statusCode,
+        responseBody,
+        requestPayload,
+      )) {
+        requestPayload = Map<String, dynamic>.from(requestPayload)
+          ..remove('temperature');
+        body = jsonEncode(requestPayload);
+        response = await _sendWithRetries(
+          url: url,
+          headers: headers,
+          body: body,
+          maxRetries: maxRetries,
+        );
+        if (response.statusCode != 200) {
+          responseBody = await response.stream.bytesToString();
+          print('Error response: $responseBody');
+          throw TranslationException(
+            message: 'API request failed',
+            statusCode: response.statusCode,
+            responseBody: responseBody,
+          );
+        }
+      } else {
+        print('Error response: $responseBody');
+        throw TranslationException(
+          message: 'API request failed',
+          statusCode: response.statusCode,
+          responseBody: responseBody,
+        );
+      }
     }
 
     // Process SSE stream
     String buffer = '';
     await for (final chunk in response.stream.transform(utf8.decoder)) {
       buffer += chunk;
-      
+
       // Process complete lines
       while (buffer.contains('\n')) {
         final lineEnd = buffer.indexOf('\n');
@@ -165,14 +205,14 @@ class OpenAICompatibleEngine extends BaseEngine {
         buffer = buffer.substring(lineEnd + 1);
 
         if (line.isEmpty) continue;
-        
+
         if (line.startsWith('data: ')) {
           final data = line.substring(6).trim();
-          
+
           if (data == '[DONE]') {
             return;
           }
-          
+
           try {
             final json = jsonDecode(data) as Map<String, dynamic>;
             final choices = json['choices'] as List<dynamic>?;
@@ -209,7 +249,8 @@ class OpenAICompatibleEngine extends BaseEngine {
     required String sourceLanguage,
     required String targetLanguage,
   }) async* {
-    final systemPrompt = '''You are an expert linguist and language teacher.
+    final systemPrompt =
+        '''You are an expert linguist and language teacher.
 Your task is to explain a selected word or phrase in the context of a given sentence.
 Respond in $targetLanguage.
 
@@ -233,82 +274,89 @@ Indicate whether the word is part of an idiom. If yes, explain the idiom.
 Provide 3-5 example sentences using "$selectedWord" with the same meaning as in the context.
 Include translations for each example.''';
 
-    final userPrompt = '''Please explain the word "$selectedWord" in the context of this sentence:
+    final userPrompt =
+        '''Please explain the word "$selectedWord" in the context of this sentence:
 
 "$fullContext"''';
 
     final url = _buildChatCompletionsUrl();
     final headers = _buildHeaders();
-    final body = jsonEncode({
+    var requestPayload = <String, dynamic>{
       'model': config.model,
       'messages': [
         {'role': 'system', 'content': systemPrompt},
         {'role': 'user', 'content': userPrompt},
       ],
       'stream': true,
-      'temperature': 0.7,
-    });
+    };
+    if (_supportsCustomTemperature(config.model)) {
+      requestPayload['temperature'] = 0.7;
+    }
+    var body = jsonEncode(requestPayload);
 
     // Make streaming request with retry logic
-    http.StreamedResponse? response;
-    Exception? lastError;
-    
-    for (int attempt = 0; attempt < 3; attempt++) {
-      try {
-        final request = http.Request('POST', Uri.parse(url));
-        request.headers.addAll(headers);
-        request.body = body;
+    const maxRetries = 3;
+    var response = await _sendWithRetries(
+      url: url,
+      headers: headers,
+      body: body,
+      maxRetries: maxRetries,
+    );
 
-        response = await client.send(request);
-        
-        if (response.statusCode == 200) {
-          break;
-        } else {
-          final errorBody = await response.stream.bytesToString();
+    if (response.statusCode != 200) {
+      var errorBody = await response.stream.bytesToString();
+
+      if (_shouldRetryWithoutTemperature(
+        response.statusCode,
+        errorBody,
+        requestPayload,
+      )) {
+        requestPayload = Map<String, dynamic>.from(requestPayload)
+          ..remove('temperature');
+        body = jsonEncode(requestPayload);
+        response = await _sendWithRetries(
+          url: url,
+          headers: headers,
+          body: body,
+          maxRetries: maxRetries,
+        );
+
+        if (response.statusCode != 200) {
+          errorBody = await response.stream.bytesToString();
           throw TranslationException(
             message: 'API request failed',
             statusCode: response.statusCode,
             responseBody: errorBody,
           );
         }
-      } on HandshakeException catch (e) {
-        lastError = e;
-        if (attempt < 2) {
-          await Future.delayed(Duration(seconds: attempt + 1));
-        }
-      } on SocketException catch (e) {
-        lastError = e;
-        if (attempt < 2) {
-          await Future.delayed(Duration(seconds: attempt + 1));
-        }
+      } else {
+        throw TranslationException(
+          message: 'API request failed',
+          statusCode: response.statusCode,
+          responseBody: errorBody,
+        );
       }
-    }
-
-    if (response == null) {
-      throw TranslationException(
-        message: 'Failed after 3 attempts: $lastError',
-      );
     }
 
     // Process SSE stream
     String buffer = '';
     await for (final chunk in response.stream.transform(utf8.decoder)) {
       buffer += chunk;
-      
+
       while (buffer.contains('\n')) {
         final lineEnd = buffer.indexOf('\n');
         final line = buffer.substring(0, lineEnd).trim();
         buffer = buffer.substring(lineEnd + 1);
 
         if (line.isEmpty) continue;
-        
+
         if (line.startsWith('data: ')) {
           final data = line.substring(6).trim();
-          
+
           if (data == '[DONE]') {
             return;
           }
-          
+
           try {
             final json = jsonDecode(data);
             final delta = json['choices']?[0]?['delta']?['content'];
@@ -341,12 +389,92 @@ Include translations for each example.''';
     return headers;
   }
 
+  bool _supportsCustomTemperature(String model) {
+    final modelLower = model.toLowerCase();
+    final host = Uri.tryParse(config.apiUrl)?.host.toLowerCase() ?? '';
+    final isOfficialOpenAI =
+        host == 'api.openai.com' || host.endsWith('.api.openai.com');
+
+    // OpenAI GPT-5 chat models currently only accept default temperature.
+    if (isOfficialOpenAI && modelLower.startsWith('gpt-5')) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _shouldRetryWithoutTemperature(
+    int statusCode,
+    String responseBody,
+    Map<String, dynamic> payload,
+  ) {
+    if (statusCode != 400 || !payload.containsKey('temperature')) {
+      return false;
+    }
+
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is! Map<String, dynamic>) {
+        return false;
+      }
+      final error = decoded['error'];
+      if (error is! Map<String, dynamic>) {
+        return false;
+      }
+      final param = error['param']?.toString().toLowerCase() ?? '';
+      final code = error['code']?.toString().toLowerCase() ?? '';
+      final message = error['message']?.toString().toLowerCase() ?? '';
+
+      return param == 'temperature' &&
+          (code == 'unsupported_value' ||
+              message.contains('temperature') && message.contains('default'));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<http.StreamedResponse> _sendWithRetries({
+    required String url,
+    required Map<String, String> headers,
+    required String body,
+    int maxRetries = 3,
+  }) async {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        final request = http.Request('POST', Uri.parse(url))
+          ..headers.addAll(headers)
+          ..body = body;
+
+        return await client.send(request).timeout(const Duration(seconds: 60));
+      } catch (e) {
+        print('Request error (attempt $attempt/$maxRetries): $e');
+        final isRetryable =
+            e.toString().contains('HandshakeException') ||
+            e.toString().contains('Connection terminated') ||
+            e.toString().contains('SocketException') ||
+            e.toString().contains('Connection reset');
+
+        if (attempt < maxRetries && isRetryable) {
+          await Future.delayed(Duration(seconds: attempt));
+          print('Retrying...');
+          continue;
+        }
+        throw TranslationException(
+          message: 'Connection failed after $attempt attempts: $e',
+        );
+      }
+    }
+
+    throw TranslationException(message: 'Failed to get response');
+  }
+
   /// Get language-specific translation guidance
   String _getLanguageGuidance(String targetLang) {
     // Provide specific guidance for certain target languages
     final langLower = targetLang.toLowerCase();
-    
-    if (langLower.contains('chinese') || langLower == 'zh' || langLower == 'zh-tw') {
+
+    if (langLower.contains('chinese') ||
+        langLower == 'zh' ||
+        langLower == 'zh-tw') {
       return '''
 - Use contemporary, natural Chinese expressions that native speakers commonly use
 - For technical terms (especially AI/tech), prefer widely-adopted Chinese translations:
@@ -357,7 +485,7 @@ Include translations for each example.''';
 - Maintain proper Chinese punctuation (。，！？etc.)
 - Ensure the translation reads naturally to native Chinese speakers''';
     }
-    
+
     if (langLower.contains('japanese') || langLower == 'ja') {
       return '''
 - Use natural Japanese expressions appropriate to the context
@@ -365,21 +493,25 @@ Include translations for each example.''';
 - Use appropriate kanji vs hiragana balance for readability
 - Maintain proper Japanese punctuation''';
     }
-    
+
     if (langLower.contains('korean') || langLower == 'ko') {
       return '''
 - Use natural Korean expressions
 - Match the formality level of the source text
 - Use appropriate Hangul and proper spacing''';
     }
-    
+
     // Default guidance for other languages
     return '''
 - Use natural, idiomatic expressions that native speakers would use
 - Maintain appropriate formality level based on the source text''';
   }
 
-  String _buildSystemPrompt(TranslateMode mode, String sourceLang, String targetLang) {
+  String _buildSystemPrompt(
+    TranslateMode mode,
+    String sourceLang,
+    String targetLang,
+  ) {
     switch (mode) {
       case TranslateMode.translate:
         final languageGuidance = _getLanguageGuidance(targetLang);
@@ -481,7 +613,12 @@ Any cultural nuances or implications.''';
     }
   }
 
-  String _buildUserPrompt(TranslateMode mode, String text, String sourceLang, String targetLang) {
+  String _buildUserPrompt(
+    TranslateMode mode,
+    String text,
+    String sourceLang,
+    String targetLang,
+  ) {
     switch (mode) {
       case TranslateMode.translate:
         return text;
@@ -489,7 +626,7 @@ Any cultural nuances or implications.''';
         // Detect if single word, phrase, or sentence
         final trimmedText = text.trim();
         final wordCount = trimmedText.split(RegExp(r'\s+')).length;
-        
+
         if (wordCount == 1) {
           return '''Please provide a comprehensive dictionary-style explanation for this word:
 
