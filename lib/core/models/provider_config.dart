@@ -2,16 +2,18 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 /// AI Provider configuration supporting OpenAI and OpenAI-compatible APIs
-/// Works with: OpenAI, OpenRouter, Vercel AI Gateway, and any compatible endpoint
+/// Works with: OpenAI, OpenRouter, Gemini (OpenAI-compatible), Vercel AI Gateway,
+/// and any compatible endpoint.
 class ProviderConfig {
   final String id;
   final String name;
-  final String apiUrl;        // e.g., "https://api.openai.com/v1"
-  final String apiPath;       // e.g., "/chat/completions"
+  final String apiUrl; // e.g., "https://api.openai.com/v1"
+  final String apiPath; // e.g., "/chat/completions"
   final String apiKey;
-  final String model;         // Default/primary model
-  final List<String> selectedModels;  // Multiple selected models
-  final Map<String, String> customHeaders;  // For OpenRouter's X-Title, HTTP-Referer, etc.
+  final String model; // Default/primary model
+  final List<String> selectedModels; // Multiple selected models
+  final Map<String, String>
+  customHeaders; // For OpenRouter's X-Title, HTTP-Referer, etc.
   final bool isDefault;
   final bool enabled;
 
@@ -81,17 +83,30 @@ class ProviderConfig {
 
   /// Get the full chat completions URL
   String get chatCompletionsUrl {
-    final baseUrl = apiUrl.endsWith('/') 
-        ? apiUrl.substring(0, apiUrl.length - 1) 
+    final baseUrl = apiUrl.endsWith('/')
+        ? apiUrl.substring(0, apiUrl.length - 1)
         : apiUrl;
-    return '$baseUrl$apiPath';
+    final path = apiPath.startsWith('/') ? apiPath : '/$apiPath';
+    return '$baseUrl$path';
   }
 
   /// Get the models endpoint URL
   String get modelsUrl {
-    final baseUrl = apiUrl.endsWith('/') 
-        ? apiUrl.substring(0, apiUrl.length - 1) 
+    final baseUrl = apiUrl.endsWith('/')
+        ? apiUrl.substring(0, apiUrl.length - 1)
         : apiUrl;
+    final path = apiPath.startsWith('/') ? apiPath : '/$apiPath';
+
+    // Derive models path from chat completion path when possible.
+    // Example: /openai/chat/completions -> /openai/models (Gemini OpenAI-compatible API)
+    if (path.endsWith('/chat/completions')) {
+      final prefix = path.substring(
+        0,
+        path.length - '/chat/completions'.length,
+      );
+      return '$baseUrl${prefix.isEmpty ? '' : prefix}/models';
+    }
+
     return '$baseUrl/models';
   }
 
@@ -116,10 +131,16 @@ class ProviderConfig {
       apiPath: json['apiPath'] as String? ?? '/chat/completions',
       apiKey: json['apiKey'] as String,
       model: json['model'] as String,
-      selectedModels: (json['selectedModels'] as List<dynamic>?)
-          ?.map((e) => e.toString()).toList() ?? [],
-      customHeaders: (json['customHeaders'] as Map<String, dynamic>?)
-          ?.map((k, v) => MapEntry(k, v.toString())) ?? {},
+      selectedModels:
+          (json['selectedModels'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      customHeaders:
+          (json['customHeaders'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, v.toString()),
+          ) ??
+          {},
       isDefault: json['isDefault'] as bool? ?? false,
       enabled: json['enabled'] as bool? ?? true,
     );
@@ -132,7 +153,9 @@ class ProviderConfig {
     if (raw.isEmpty) return [];
     try {
       final arr = jsonDecode(raw) as List<dynamic>;
-      return [for (final e in arr) ProviderConfig.fromJson(e as Map<String, dynamic>)];
+      return [
+        for (final e in arr) ProviderConfig.fromJson(e as Map<String, dynamic>),
+      ];
     } catch (_) {
       return [];
     }
@@ -141,7 +164,9 @@ class ProviderConfig {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ProviderConfig && runtimeType == other.runtimeType && id == other.id;
+      other is ProviderConfig &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
 
   @override
   int get hashCode => id.hashCode;

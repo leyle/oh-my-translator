@@ -17,6 +17,7 @@ class ModelInfo {
 /// OpenAI-compatible engine that works with:
 /// - OpenAI API (api.openai.com)
 /// - OpenRouter (openrouter.ai)
+/// - Google Gemini OpenAI-compatible API
 /// - Vercel AI Gateway
 /// - Any OpenAI-compatible endpoint
 class OpenAICompatibleEngine extends BaseEngine {

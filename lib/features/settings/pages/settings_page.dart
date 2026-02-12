@@ -14,8 +14,6 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return Scaffold(
       // backgroundColor: cs.surface, // Inherit from main theme (Alice Blue)
       appBar: AppBar(
@@ -25,7 +23,9 @@ class SettingsPage extends StatelessWidget {
         elevation: 0,
         leadingWidth: 100, // Extra space to avoid overlap with window controls
         leading: Padding(
-          padding: const EdgeInsets.only(left: 70), // Account for macOS traffic lights
+          padding: const EdgeInsets.only(
+            left: 70,
+          ), // Account for macOS traffic lights
           child: IconButton(
             icon: const Icon(LucideIcons.chevronLeft),
             onPressed: () => Navigator.pop(context),
@@ -41,24 +41,30 @@ class SettingsPage extends StatelessWidget {
               _buildSectionHeader(context, 'Appearance'),
               const SizedBox(height: 8),
               _buildFontSizeTile(context, settings),
-              
+
               const SizedBox(height: 24),
-              
+
               // Language Preferences section
               _buildSectionHeader(context, 'Language Preferences'),
               const SizedBox(height: 8),
               _buildSmartSwapSettings(context, settings),
-              
+
               const SizedBox(height: 24),
 
               // AI Providers section
               _buildSectionHeader(context, 'AI Providers'),
               const SizedBox(height: 8),
-              ...settings.providers.map((provider) => _buildProviderTile(context, provider, settings)),
-              _buildAddButton(context, 'Add Provider', () => _addProvider(context)),
-              
+              ...settings.providers.map(
+                (provider) => _buildProviderTile(context, provider, settings),
+              ),
+              _buildAddButton(
+                context,
+                'Add Provider',
+                () => _addProvider(context),
+              ),
+
               const SizedBox(height: 24),
-              
+
               // Custom Actions section
               _buildSectionHeader(context, 'Custom Actions'),
               const SizedBox(height: 8),
@@ -72,13 +78,18 @@ class SettingsPage extends StatelessWidget {
                   },
                   itemBuilder: (context, index) {
                     final action = settings.customActions[index];
-                    return _buildActionTile(context, action, settings, key: ValueKey(action.id));
+                    return _buildActionTile(
+                      context,
+                      action,
+                      settings,
+                      key: ValueKey(action.id),
+                    );
                   },
                 ),
               _buildAddButton(context, 'Add Action', () => _addAction(context)),
-              
+
               const SizedBox(height: 24),
-              
+
               // About section
               _buildSectionHeader(context, 'About'),
               const SizedBox(height: 8),
@@ -103,7 +114,11 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildProviderTile(BuildContext context, ProviderConfig provider, SettingsProvider settings) {
+  Widget _buildProviderTile(
+    BuildContext context,
+    ProviderConfig provider,
+    SettingsProvider settings,
+  ) {
     final cs = Theme.of(context).colorScheme;
     final isDefault = settings.defaultProvider?.id == provider.id;
 
@@ -111,13 +126,13 @@ class SettingsPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: provider.enabled 
+          backgroundColor: provider.enabled
               ? (isDefault ? cs.primaryContainer : cs.surfaceContainerHighest)
               : cs.surfaceContainerHighest.withOpacity(0.5),
           child: Icon(
             LucideIcons.bot,
             size: 20,
-            color: provider.enabled 
+            color: provider.enabled
                 ? (isDefault ? cs.primary : cs.onSurface)
                 : cs.onSurface.withOpacity(0.4),
           ),
@@ -144,7 +159,11 @@ class SettingsPage extends StatelessWidget {
                 ),
                 child: Text(
                   'Default',
-                  style: TextStyle(fontSize: 11, color: cs.primary, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: cs.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             const SizedBox(width: 4),
@@ -172,7 +191,10 @@ class SettingsPage extends StatelessWidget {
               },
               itemBuilder: (context) => [
                 if (!isDefault)
-                  const PopupMenuItem(value: 'default', child: Text('Set as Default')),
+                  const PopupMenuItem(
+                    value: 'default',
+                    child: Text('Set as Default'),
+                  ),
                 const PopupMenuItem(value: 'edit', child: Text('Edit')),
                 const PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],
@@ -183,7 +205,12 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionTile(BuildContext context, CustomAction action, SettingsProvider settings, {Key? key}) {
+  Widget _buildActionTile(
+    BuildContext context,
+    CustomAction action,
+    SettingsProvider settings, {
+    Key? key,
+  }) {
     final cs = Theme.of(context).colorScheme;
 
     return Card(
@@ -244,11 +271,9 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-
-
   Widget _buildFontSizeTile(BuildContext context, SettingsProvider settings) {
     final cs = Theme.of(context).colorScheme;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -291,11 +316,16 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSmartSwapSettings(BuildContext context, SettingsProvider settings) {
+  Widget _buildSmartSwapSettings(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
     final cs = Theme.of(context).colorScheme;
     // Exclude 'auto' from language options
-    final languages = SupportedLanguages.all.where((l) => l.code != 'auto').toList();
-    
+    final languages = SupportedLanguages.all
+        .where((l) => l.code != 'auto')
+        .toList();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -317,7 +347,10 @@ class SettingsPage extends StatelessWidget {
                       ),
                       Text(
                         'Auto-detect input and set target language',
-                        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withOpacity(0.6),
+                        ),
                       ),
                     ],
                   ),
@@ -328,11 +361,11 @@ class SettingsPage extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             // Language dropdowns (only visible when enabled)
             if (settings.smartSwapEnabled) ...[
               const Divider(height: 24),
-              
+
               // Native language
               Row(
                 children: [
@@ -340,7 +373,10 @@ class SettingsPage extends StatelessWidget {
                     width: 120,
                     child: Text(
                       'Native Language',
-                      style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withOpacity(0.8),
+                      ),
                     ),
                   ),
                   Expanded(
@@ -364,9 +400,9 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Secondary language
               Row(
                 children: [
@@ -374,7 +410,10 @@ class SettingsPage extends StatelessWidget {
                     width: 120,
                     child: Text(
                       'Secondary Language',
-                      style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withOpacity(0.8),
+                      ),
                     ),
                   ),
                   Expanded(
@@ -398,11 +437,14 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 8),
               Text(
                 '• Native input → translates to Secondary\n• Secondary input → translates to Native',
-                style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.5)),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cs.onSurface.withOpacity(0.5),
+                ),
               ),
             ],
           ],
@@ -411,7 +453,11 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAddButton(BuildContext context, String label, VoidCallback onPressed) {
+  Widget _buildAddButton(
+    BuildContext context,
+    String label,
+    VoidCallback onPressed,
+  ) {
     final cs = Theme.of(context).colorScheme;
 
     return OutlinedButton.icon(
@@ -447,25 +493,35 @@ class SettingsPage extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Version 1.1.0',
-              style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurface.withOpacity(0.6),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'AI-powered translation tool',
-              style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurface.withOpacity(0.6),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Author: leyle',
-              style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.5)),
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurface.withOpacity(0.5),
+              ),
             ),
             const SizedBox(height: 4),
             GestureDetector(
-              onTap: () => _launchUrl('https://github.com/leyle/oh-my-translator'),
+              onTap: () =>
+                  _launchUrl('https://github.com/leyle/oh-my-translator'),
               child: Text(
                 'github.com/leyle/oh-my-translator',
                 style: TextStyle(
-                  fontSize: 12, 
+                  fontSize: 12,
                   color: cs.primary,
                   decoration: TextDecoration.underline,
                 ),
@@ -476,7 +532,7 @@ class SettingsPage extends StatelessWidget {
       ),
     );
   }
-  
+
   void _launchUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -490,25 +546,44 @@ class SettingsPage extends StatelessWidget {
 
   IconData _getIconForAction(String iconName) {
     switch (iconName) {
-      case 'volume2': return LucideIcons.volume2;
-      case 'languages': return LucideIcons.languages;
-      case 'search': return LucideIcons.search;
-      case 'sparkles': return LucideIcons.sparkles;
-      case 'brain': return LucideIcons.brain;
-      case 'terminal': return LucideIcons.terminal;
-      case 'code': return LucideIcons.code;
-      case 'clipboard': return LucideIcons.clipboard;
-      case 'link': return LucideIcons.link;
-      case 'upload': return LucideIcons.upload;
-      case 'bookmark': return LucideIcons.bookmark;
-      case 'zap': return LucideIcons.zap;
-      case 'wand': return LucideIcons.wand;
-      case 'briefcase': return LucideIcons.briefcase;
-      case 'messageCircle': return LucideIcons.messageCircle;
-      case 'share': return LucideIcons.share;
-      case 'send': return LucideIcons.send;
-      case 'external_link': return LucideIcons.externalLink;
-      default: return LucideIcons.play;
+      case 'volume2':
+        return LucideIcons.volume2;
+      case 'languages':
+        return LucideIcons.languages;
+      case 'search':
+        return LucideIcons.search;
+      case 'sparkles':
+        return LucideIcons.sparkles;
+      case 'brain':
+        return LucideIcons.brain;
+      case 'terminal':
+        return LucideIcons.terminal;
+      case 'code':
+        return LucideIcons.code;
+      case 'clipboard':
+        return LucideIcons.clipboard;
+      case 'link':
+        return LucideIcons.link;
+      case 'upload':
+        return LucideIcons.upload;
+      case 'bookmark':
+        return LucideIcons.bookmark;
+      case 'zap':
+        return LucideIcons.zap;
+      case 'wand':
+        return LucideIcons.wand;
+      case 'briefcase':
+        return LucideIcons.briefcase;
+      case 'messageCircle':
+        return LucideIcons.messageCircle;
+      case 'share':
+        return LucideIcons.share;
+      case 'send':
+        return LucideIcons.send;
+      case 'external_link':
+        return LucideIcons.externalLink;
+      default:
+        return LucideIcons.play;
     }
   }
 
@@ -584,11 +659,13 @@ class SettingsPage extends StatelessWidget {
                 FilledButton(
                   onPressed: () {
                     final settings = context.read<SettingsProvider>();
-                    settings.addAction(CustomAction.create(
-                      name: nameController.text.trim(),
-                      scriptPath: scriptController.text.trim(),
-                      iconName: selectedIcon,
-                    ));
+                    settings.addAction(
+                      CustomAction.create(
+                        name: nameController.text.trim(),
+                        scriptPath: scriptController.text.trim(),
+                        iconName: selectedIcon,
+                      ),
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text('Add'),
@@ -655,11 +732,15 @@ class SettingsPage extends StatelessWidget {
                               border: Border.all(
                                 color: isSelected
                                     ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.outline.withOpacity(0.3),
                                 width: isSelected ? 2 : 1,
                               ),
                               color: isSelected
-                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.1)
                                   : null,
                             ),
                             child: Icon(
@@ -684,11 +765,13 @@ class SettingsPage extends StatelessWidget {
                 FilledButton(
                   onPressed: () {
                     final settings = context.read<SettingsProvider>();
-                    settings.updateAction(action.copyWith(
-                      name: nameController.text.trim(),
-                      scriptPath: scriptController.text.trim(),
-                      iconName: selectedIcon,
-                    ));
+                    settings.updateAction(
+                      action.copyWith(
+                        name: nameController.text.trim(),
+                        scriptPath: scriptController.text.trim(),
+                        iconName: selectedIcon,
+                      ),
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text('Save'),
@@ -712,7 +795,47 @@ class ProviderEditPage extends StatefulWidget {
   State<ProviderEditPage> createState() => _ProviderEditPageState();
 }
 
+class _ProviderPreset {
+  final String label;
+  final String name;
+  final String apiUrl;
+  final String apiPath;
+  final String model;
+
+  const _ProviderPreset({
+    required this.label,
+    required this.name,
+    required this.apiUrl,
+    required this.apiPath,
+    required this.model,
+  });
+}
+
 class _ProviderEditPageState extends State<ProviderEditPage> {
+  static const List<_ProviderPreset> _providerPresets = [
+    _ProviderPreset(
+      label: 'OpenAI',
+      name: 'OpenAI',
+      apiUrl: 'https://api.openai.com/v1',
+      apiPath: '/chat/completions',
+      model: 'gpt-5.2-chat-latest',
+    ),
+    _ProviderPreset(
+      label: 'OpenRouter',
+      name: 'OpenRouter',
+      apiUrl: 'https://openrouter.ai/api/v1',
+      apiPath: '/chat/completions',
+      model: 'openai/gpt-4.1-mini',
+    ),
+    _ProviderPreset(
+      label: 'Gemini (OpenAI)',
+      name: 'Gemini',
+      apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      apiPath: '/chat/completions',
+      model: 'gemini-2.5-flash',
+    ),
+  ];
+
   late TextEditingController _nameController;
   late TextEditingController _urlController;
   late TextEditingController _pathController;
@@ -732,19 +855,38 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
-    _urlController = TextEditingController(text: widget.existing?.apiUrl ?? 'https://api.openai.com/v1');
-    _pathController = TextEditingController(text: widget.existing?.apiPath ?? '/chat/completions');
+    _urlController = TextEditingController(
+      text: widget.existing?.apiUrl ?? 'https://api.openai.com/v1',
+    );
+    _pathController = TextEditingController(
+      text: widget.existing?.apiPath ?? '/chat/completions',
+    );
     _keyController = TextEditingController(text: widget.existing?.apiKey ?? '');
-    _modelController = TextEditingController(text: widget.existing?.model ?? '');
+    _modelController = TextEditingController(
+      text: widget.existing?.model ?? '',
+    );
     _selectedModels = List.from(widget.existing?.selectedModels ?? []);
     _enabled = widget.existing?.enabled ?? true;
-    
+
     // Add the main model to selected if not already there
-    if (widget.existing?.model != null && 
+    if (widget.existing?.model != null &&
         widget.existing!.model.isNotEmpty &&
         !_selectedModels.contains(widget.existing!.model)) {
       _selectedModels.add(widget.existing!.model);
     }
+  }
+
+  void _applyPreset(_ProviderPreset preset) {
+    setState(() {
+      _nameController.text = preset.name;
+      _urlController.text = preset.apiUrl;
+      _pathController.text = preset.apiPath;
+      _modelController.text = preset.model;
+      _selectedModels = [preset.model];
+      _availableModels = [];
+      _fetchError = null;
+      _testResult = null;
+    });
   }
 
   @override
@@ -782,10 +924,12 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
       final engine = OpenAICompatibleEngine(config: _buildTempProvider());
       final success = await engine.testConnection();
       engine.dispose();
-      
+
       setState(() {
         _isTesting = false;
-        _testResult = success ? '✅ Connected successfully' : '❌ Connection failed';
+        _testResult = success
+            ? '✅ Connected successfully'
+            : '❌ Connection failed';
       });
     } catch (e) {
       setState(() {
@@ -796,7 +940,8 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
   }
 
   Future<void> _fetchModels() async {
-    if (_urlController.text.trim().isEmpty || _keyController.text.trim().isEmpty) {
+    if (_urlController.text.trim().isEmpty ||
+        _keyController.text.trim().isEmpty) {
       setState(() => _fetchError = 'Please enter API URL and API Key first');
       return;
     }
@@ -810,7 +955,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
       final engine = OpenAICompatibleEngine(config: _buildTempProvider());
       final models = await engine.fetchModels();
       engine.dispose();
-      
+
       setState(() {
         _availableModels = models;
         _isFetchingModels = false;
@@ -858,34 +1003,39 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
 
   void _save() {
     final settings = context.read<SettingsProvider>();
-    
+
     // Ensure main model is in selected models
-    if (_modelController.text.isNotEmpty && !_selectedModels.contains(_modelController.text)) {
+    if (_modelController.text.isNotEmpty &&
+        !_selectedModels.contains(_modelController.text)) {
       _selectedModels.insert(0, _modelController.text);
     }
-    
+
     if (widget.existing == null) {
-      settings.addProvider(ProviderConfig.create(
-        name: _nameController.text.trim(),
-        apiUrl: _urlController.text.trim(),
-        apiPath: _pathController.text.trim(),
-        apiKey: _keyController.text.trim(),
-        model: _modelController.text.trim(),
-        selectedModels: _selectedModels,
-        enabled: _enabled,
-      ));
+      settings.addProvider(
+        ProviderConfig.create(
+          name: _nameController.text.trim(),
+          apiUrl: _urlController.text.trim(),
+          apiPath: _pathController.text.trim(),
+          apiKey: _keyController.text.trim(),
+          model: _modelController.text.trim(),
+          selectedModels: _selectedModels,
+          enabled: _enabled,
+        ),
+      );
     } else {
-      settings.updateProvider(widget.existing!.copyWith(
-        name: _nameController.text.trim(),
-        apiUrl: _urlController.text.trim(),
-        apiPath: _pathController.text.trim(),
-        apiKey: _keyController.text.trim(),
-        model: _modelController.text.trim(),
-        selectedModels: _selectedModels,
-        enabled: _enabled,
-      ));
+      settings.updateProvider(
+        widget.existing!.copyWith(
+          name: _nameController.text.trim(),
+          apiUrl: _urlController.text.trim(),
+          apiPath: _pathController.text.trim(),
+          apiKey: _keyController.text.trim(),
+          model: _modelController.text.trim(),
+          selectedModels: _selectedModels,
+          enabled: _enabled,
+        ),
+      );
     }
-    
+
     Navigator.pop(context);
   }
 
@@ -903,9 +1053,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
         leadingWidth: 100,
         leading: Padding(
           padding: const EdgeInsets.only(left: 70),
-          child: BackButton(
-            onPressed: () => Navigator.pop(context),
-          ),
+          child: BackButton(onPressed: () => Navigator.pop(context)),
         ),
         actions: [
           // Enable toggle in app bar
@@ -919,12 +1067,40 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Provider presets
+          Text(
+            'Quick Presets',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _providerPresets.map((preset) {
+              final isActive =
+                  _urlController.text.trim() == preset.apiUrl &&
+                  _pathController.text.trim() == preset.apiPath;
+              return OutlinedButton(
+                onPressed: () => _applyPreset(preset),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: isActive ? cs.primaryContainer : null,
+                ),
+                child: Text(preset.label),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+
           // Name
           TextField(
             controller: _nameController,
             decoration: const InputDecoration(
               labelText: 'Name',
-              hintText: 'e.g., OpenAI, OpenRouter',
+              hintText: 'e.g., OpenAI, OpenRouter, Gemini',
               border: OutlineInputBorder(),
             ),
           ),
@@ -963,7 +1139,11 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
                 child: FilledButton.tonal(
                   onPressed: _isTesting ? null : _testConnection,
                   child: _isTesting
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Test'),
                 ),
               ),
@@ -987,7 +1167,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
             controller: _urlController,
             decoration: const InputDecoration(
               labelText: 'API Base URL',
-              hintText: 'https://api.openai.com/v1',
+              hintText: 'https://api.openai.com/v1 or .../v1beta/openai',
               border: OutlineInputBorder(),
             ),
           ),
@@ -998,7 +1178,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
             controller: _pathController,
             decoration: const InputDecoration(
               labelText: 'API Path',
-              hintText: '/chat/completions',
+              hintText: '/chat/completions (usually)',
               border: OutlineInputBorder(),
             ),
           ),
@@ -1031,8 +1211,12 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
               ),
               FilledButton.icon(
                 onPressed: _isFetchingModels ? null : _fetchModels,
-                icon: _isFetchingModels 
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                icon: _isFetchingModels
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(LucideIcons.refreshCw, size: 16),
                 label: const Text('Fetch'),
               ),
@@ -1058,15 +1242,29 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
 
           // Primary model selector
           DropdownButtonFormField<String>(
-            value: _selectedModels.contains(_modelController.text) ? _modelController.text : null,
+            value: _selectedModels.contains(_modelController.text)
+                ? _modelController.text
+                : null,
             decoration: const InputDecoration(
               labelText: 'Primary Model',
               border: OutlineInputBorder(),
             ),
             isExpanded: true,
-            items: _selectedModels.isEmpty 
-                ? [DropdownMenuItem(value: _modelController.text, child: Text(_modelController.text))]
-                : _selectedModels.map((m) => DropdownMenuItem(value: m, child: Text(m, overflow: TextOverflow.ellipsis))).toList(),
+            items: _selectedModels.isEmpty
+                ? [
+                    DropdownMenuItem(
+                      value: _modelController.text,
+                      child: Text(_modelController.text),
+                    ),
+                  ]
+                : _selectedModels
+                      .map(
+                        (m) => DropdownMenuItem(
+                          value: m,
+                          child: Text(m, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
             onChanged: (value) {
               if (value != null) {
                 setState(() => _modelController.text = value);
@@ -1086,7 +1284,9 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
                     leading: Icon(
                       isPrimary ? LucideIcons.star : LucideIcons.circle,
                       size: 16,
-                      color: isPrimary ? cs.primary : cs.onSurface.withOpacity(0.4),
+                      color: isPrimary
+                          ? cs.primary
+                          : cs.onSurface.withOpacity(0.4),
                     ),
                     title: Text(model, overflow: TextOverflow.ellipsis),
                     trailing: Row(
@@ -1095,14 +1295,16 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
                         if (!isPrimary)
                           IconButton(
                             icon: Icon(LucideIcons.star, size: 16),
-                            onPressed: () => setState(() => _modelController.text = model),
+                            onPressed: () =>
+                                setState(() => _modelController.text = model),
                             tooltip: 'Set as Primary',
                           ),
                         IconButton(
                           icon: Icon(LucideIcons.minus, size: 16),
                           onPressed: () => setState(() {
                             _selectedModels.remove(model);
-                            if (model == _modelController.text && _selectedModels.isNotEmpty) {
+                            if (model == _modelController.text &&
+                                _selectedModels.isNotEmpty) {
                               _modelController.text = _selectedModels.first;
                             }
                           }),
@@ -1114,7 +1316,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
                 }).toList(),
               ),
             ),
-          
+
           const SizedBox(height: 24),
 
           // Save button
@@ -1167,13 +1369,13 @@ class _ModelPickerDialogState extends State<_ModelPickerDialog> {
 
   Map<String, List<ModelInfo>> _groupModels() {
     final groups = <String, List<ModelInfo>>{};
-    
+
     for (final model in widget.availableModels) {
-      if (_searchQuery.isNotEmpty && 
+      if (_searchQuery.isNotEmpty &&
           !model.id.toLowerCase().contains(_searchQuery.toLowerCase())) {
         continue;
       }
-      
+
       // Extract group from model id (e.g., "gpt-4o" -> "gpt")
       String group = 'Other';
       if (model.id.startsWith('gpt')) {
@@ -1189,10 +1391,10 @@ class _ModelPickerDialogState extends State<_ModelPickerDialog> {
       } else if (model.id.contains('qwen')) {
         group = 'Qwen';
       }
-      
+
       groups.putIfAbsent(group, () => []).add(model);
     }
-    
+
     return groups;
   }
 
@@ -1231,8 +1433,13 @@ class _ModelPickerDialogState extends State<_ModelPickerDialog> {
               decoration: InputDecoration(
                 hintText: 'Type model name to filter',
                 prefixIcon: Icon(LucideIcons.search, size: 18),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
               ),
               onChanged: (v) => setState(() => _searchQuery = v),
             ),
@@ -1250,9 +1457,13 @@ class _ModelPickerDialogState extends State<_ModelPickerDialog> {
                       return ListTile(
                         dense: true,
                         leading: Icon(
-                          isSelected ? LucideIcons.circleCheck : LucideIcons.circle,
+                          isSelected
+                              ? LucideIcons.circleCheck
+                              : LucideIcons.circle,
                           size: 18,
-                          color: isSelected ? cs.primary : cs.onSurface.withOpacity(0.4),
+                          color: isSelected
+                              ? cs.primary
+                              : cs.onSurface.withOpacity(0.4),
                         ),
                         title: Text(model.id, overflow: TextOverflow.ellipsis),
                         trailing: IconButton(
