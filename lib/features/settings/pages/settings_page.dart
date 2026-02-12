@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/provider_config.dart';
 import '../../../core/models/custom_action.dart';
 import '../../../core/models/language.dart';
+import '../../../core/models/prompt_templates.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/engines/openai_compatible_engine.dart';
 
@@ -62,6 +63,13 @@ class SettingsPage extends StatelessWidget {
                 'Add Provider',
                 () => _addProvider(context),
               ),
+
+              const SizedBox(height: 24),
+
+              // Prompt Templates section
+              _buildSectionHeader(context, 'AI Prompts'),
+              const SizedBox(height: 8),
+              _buildPromptTemplatesTile(context, settings),
 
               const SizedBox(height: 24),
 
@@ -471,6 +479,23 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  Widget _buildPromptTemplatesTile(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(LucideIcons.messageSquareText),
+        title: const Text('Edit Prompt Templates'),
+        subtitle: const Text(
+          'Configure translate, explain, polish, and context prompts',
+        ),
+        trailing: const Icon(LucideIcons.chevronRight),
+        onTap: () => _editPromptTemplates(context, settings),
+      ),
+    );
+  }
+
   Widget _buildAboutTile(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
@@ -591,6 +616,18 @@ class SettingsPage extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const ProviderEditPage(existing: null),
+      ),
+    );
+  }
+
+  void _editPromptTemplates(BuildContext context, SettingsProvider settings) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PromptTemplatesPage(
+          initial: settings.promptTemplates,
+          onSave: settings.updatePromptTemplates,
+          onReset: settings.resetPromptTemplates,
+        ),
       ),
     );
   }
@@ -781,6 +818,306 @@ class SettingsPage extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class PromptTemplatesPage extends StatefulWidget {
+  final PromptTemplates initial;
+  final Future<void> Function(PromptTemplates templates) onSave;
+  final Future<void> Function() onReset;
+
+  const PromptTemplatesPage({
+    super.key,
+    required this.initial,
+    required this.onSave,
+    required this.onReset,
+  });
+
+  @override
+  State<PromptTemplatesPage> createState() => _PromptTemplatesPageState();
+}
+
+class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
+  late TextEditingController _translateSystemController;
+  late TextEditingController _translateUserController;
+  late TextEditingController _explainSystemController;
+  late TextEditingController _explainWordUserController;
+  late TextEditingController _explainPhraseUserController;
+  late TextEditingController _explainTextUserController;
+  late TextEditingController _polishSystemController;
+  late TextEditingController _polishUserController;
+  late TextEditingController _contextSystemController;
+  late TextEditingController _contextUserController;
+  late TextEditingController _guidanceDefaultController;
+  late TextEditingController _guidanceChineseController;
+  late TextEditingController _guidanceJapaneseController;
+  late TextEditingController _guidanceKoreanController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFromTemplates(widget.initial);
+  }
+
+  void _loadFromTemplates(PromptTemplates templates) {
+    _translateSystemController = TextEditingController(
+      text: templates.translateSystem,
+    );
+    _translateUserController = TextEditingController(
+      text: templates.translateUser,
+    );
+    _explainSystemController = TextEditingController(
+      text: templates.explainSystem,
+    );
+    _explainWordUserController = TextEditingController(
+      text: templates.explainWordUser,
+    );
+    _explainPhraseUserController = TextEditingController(
+      text: templates.explainPhraseUser,
+    );
+    _explainTextUserController = TextEditingController(
+      text: templates.explainTextUser,
+    );
+    _polishSystemController = TextEditingController(
+      text: templates.polishSystem,
+    );
+    _polishUserController = TextEditingController(text: templates.polishUser);
+    _contextSystemController = TextEditingController(
+      text: templates.explainInContextSystem,
+    );
+    _contextUserController = TextEditingController(
+      text: templates.explainInContextUser,
+    );
+    _guidanceDefaultController = TextEditingController(
+      text: templates.languageGuidanceDefault,
+    );
+    _guidanceChineseController = TextEditingController(
+      text: templates.languageGuidanceChinese,
+    );
+    _guidanceJapaneseController = TextEditingController(
+      text: templates.languageGuidanceJapanese,
+    );
+    _guidanceKoreanController = TextEditingController(
+      text: templates.languageGuidanceKorean,
+    );
+  }
+
+  PromptTemplates _buildTemplates() {
+    return PromptTemplates(
+      translateSystem: _translateSystemController.text,
+      translateUser: _translateUserController.text,
+      explainSystem: _explainSystemController.text,
+      explainWordUser: _explainWordUserController.text,
+      explainPhraseUser: _explainPhraseUserController.text,
+      explainTextUser: _explainTextUserController.text,
+      polishSystem: _polishSystemController.text,
+      polishUser: _polishUserController.text,
+      explainInContextSystem: _contextSystemController.text,
+      explainInContextUser: _contextUserController.text,
+      languageGuidanceDefault: _guidanceDefaultController.text,
+      languageGuidanceChinese: _guidanceChineseController.text,
+      languageGuidanceJapanese: _guidanceJapaneseController.text,
+      languageGuidanceKorean: _guidanceKoreanController.text,
+    );
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    try {
+      await widget.onSave(_buildTemplates());
+      if (!mounted) return;
+      Navigator.pop(context);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _resetToDefaults() async {
+    setState(() => _isSaving = true);
+    try {
+      await widget.onReset();
+      final defaults = PromptTemplates.defaults();
+      _translateSystemController.text = defaults.translateSystem;
+      _translateUserController.text = defaults.translateUser;
+      _explainSystemController.text = defaults.explainSystem;
+      _explainWordUserController.text = defaults.explainWordUser;
+      _explainPhraseUserController.text = defaults.explainPhraseUser;
+      _explainTextUserController.text = defaults.explainTextUser;
+      _polishSystemController.text = defaults.polishSystem;
+      _polishUserController.text = defaults.polishUser;
+      _contextSystemController.text = defaults.explainInContextSystem;
+      _contextUserController.text = defaults.explainInContextUser;
+      _guidanceDefaultController.text = defaults.languageGuidanceDefault;
+      _guidanceChineseController.text = defaults.languageGuidanceChinese;
+      _guidanceJapaneseController.text = defaults.languageGuidanceJapanese;
+      _guidanceKoreanController.text = defaults.languageGuidanceKorean;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Prompt templates reset to defaults')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Widget _buildEditor(
+    String title,
+    TextEditingController controller, {
+    int minLines = 4,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          minLines: minLines,
+          maxLines: minLines + 8,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _translateSystemController.dispose();
+    _translateUserController.dispose();
+    _explainSystemController.dispose();
+    _explainWordUserController.dispose();
+    _explainPhraseUserController.dispose();
+    _explainTextUserController.dispose();
+    _polishSystemController.dispose();
+    _polishUserController.dispose();
+    _contextSystemController.dispose();
+    _contextUserController.dispose();
+    _guidanceDefaultController.dispose();
+    _guidanceChineseController.dispose();
+    _guidanceJapaneseController.dispose();
+    _guidanceKoreanController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Prompt Templates'),
+        actions: [
+          TextButton(
+            onPressed: _isSaving ? null : _resetToDefaults,
+            child: const Text('Reset Defaults'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Supported placeholders: {text}, {sourceLanguage}, {targetLanguage}, {selectedWord}, {fullContext}, {languageGuidance}.',
+            style: TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          _buildEditor(
+            'Translate System Prompt',
+            _translateSystemController,
+            minLines: 8,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Translate User Prompt',
+            _translateUserController,
+            minLines: 3,
+          ),
+          const SizedBox(height: 16),
+          _buildEditor(
+            'Explain System Prompt',
+            _explainSystemController,
+            minLines: 8,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Explain User Prompt (Word)',
+            _explainWordUserController,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Explain User Prompt (Phrase)',
+            _explainPhraseUserController,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Explain User Prompt (Text)',
+            _explainTextUserController,
+          ),
+          const SizedBox(height: 16),
+          _buildEditor(
+            'Polish System Prompt',
+            _polishSystemController,
+            minLines: 8,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Polish User Prompt',
+            _polishUserController,
+            minLines: 3,
+          ),
+          const SizedBox(height: 16),
+          _buildEditor(
+            'Context Explain System Prompt',
+            _contextSystemController,
+            minLines: 8,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor('Context Explain User Prompt', _contextUserController),
+          const SizedBox(height: 16),
+          _buildEditor(
+            'Language Guidance (Default)',
+            _guidanceDefaultController,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Language Guidance (Chinese)',
+            _guidanceChineseController,
+            minLines: 6,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Language Guidance (Japanese)',
+            _guidanceJapaneseController,
+            minLines: 4,
+          ),
+          const SizedBox(height: 12),
+          _buildEditor(
+            'Language Guidance (Korean)',
+            _guidanceKoreanController,
+            minLines: 4,
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: _isSaving ? null : _save,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Save Prompt Templates'),
+          ),
+        ],
+      ),
     );
   }
 }

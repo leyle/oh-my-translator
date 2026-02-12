@@ -1,5 +1,6 @@
 import '../models/language.dart';
 import '../models/provider_config.dart';
+import '../models/prompt_templates.dart';
 import 'engines/base_engine.dart';
 import 'engines/openai_compatible_engine.dart';
 
@@ -8,12 +9,31 @@ import 'engines/openai_compatible_engine.dart';
 class TranslationService {
   ProviderConfig? _activeProvider;
   BaseEngine? _engine;
+  PromptTemplates _promptTemplates = PromptTemplates.defaults();
+
+  PromptTemplates get promptTemplates => _promptTemplates;
 
   /// Set the active provider for translations
   void setProvider(ProviderConfig provider) {
     _activeProvider = provider;
     _engine?.dispose();
-    _engine = OpenAICompatibleEngine(config: provider);
+    _engine = OpenAICompatibleEngine(
+      config: provider,
+      promptTemplates: _promptTemplates,
+    );
+  }
+
+  /// Set prompt templates and refresh active engine.
+  void setPromptTemplates(PromptTemplates templates) {
+    _promptTemplates = templates;
+    final provider = _activeProvider;
+    if (provider != null) {
+      _engine?.dispose();
+      _engine = OpenAICompatibleEngine(
+        config: provider,
+        promptTemplates: _promptTemplates,
+      );
+    }
   }
 
   /// Get the currently active provider

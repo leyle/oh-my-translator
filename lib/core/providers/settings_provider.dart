@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/provider_config.dart';
 import '../models/custom_action.dart';
 import '../models/language.dart';
+import '../models/prompt_templates.dart';
 import '../services/translation_service.dart';
 import '../services/engines/openai_compatible_engine.dart';
 
@@ -21,6 +21,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _nativeLanguageKey = 'native_language';
   static const String _secondaryLanguageKey = 'secondary_language';
   static const String _smartSwapEnabledKey = 'smart_swap_enabled';
+  static const String _promptTemplatesKey = 'prompt_templates';
 
   SharedPreferences? _prefs;
   List<ProviderConfig> _providers = [];
@@ -33,17 +34,20 @@ class SettingsProvider extends ChangeNotifier {
   String _secondaryLanguage = 'en';
   bool _smartSwapEnabled = false;
   double _fontSize = 16.0;
+  PromptTemplates _promptTemplates = PromptTemplates.defaults();
 
   final TranslationService _translationService;
 
   SettingsProvider({TranslationService? translationService})
-      : _translationService = translationService ?? TranslationService();
+    : _translationService = translationService ?? TranslationService();
 
   // Getters
   List<ProviderConfig> get providers => List.unmodifiable(_providers);
-  List<ProviderConfig> get enabledProviders => _providers.where((p) => p.enabled).toList();
+  List<ProviderConfig> get enabledProviders =>
+      _providers.where((p) => p.enabled).toList();
   List<CustomAction> get customActions => List.unmodifiable(_customActions);
-  List<CustomAction> get enabledActions => _customActions.where((a) => a.enabled).toList();
+  List<CustomAction> get enabledActions =>
+      _customActions.where((a) => a.enabled).toList();
   String get sourceLanguage => _sourceLanguage;
   String get targetLanguage => _targetLanguage;
   TranslateMode get defaultMode => _defaultMode;
@@ -52,13 +56,16 @@ class SettingsProvider extends ChangeNotifier {
   String get nativeLanguage => _nativeLanguage;
   String get secondaryLanguage => _secondaryLanguage;
   bool get smartSwapEnabled => _smartSwapEnabled;
+  PromptTemplates get promptTemplates => _promptTemplates;
 
   /// Get the default provider (must be enabled)
   ProviderConfig? get defaultProvider {
     // First try to find the explicitly set default provider (if enabled)
     if (_defaultProviderId != null) {
       try {
-        final provider = _providers.firstWhere((p) => p.id == _defaultProviderId);
+        final provider = _providers.firstWhere(
+          (p) => p.id == _defaultProviderId,
+        );
         if (provider.enabled) return provider;
       } catch (_) {}
     }
@@ -73,7 +80,8 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     await _loadSettings();
-    
+    _translationService.setPromptTemplates(_promptTemplates);
+
     // Set up translation service with default provider
     final provider = defaultProvider;
     if (provider != null) {
@@ -104,7 +112,11 @@ class SettingsProvider extends ChangeNotifier {
     _nativeLanguage = _prefs!.getString(_nativeLanguageKey) ?? 'zh';
     _secondaryLanguage = _prefs!.getString(_secondaryLanguageKey) ?? 'en';
     _smartSwapEnabled = _prefs!.getBool(_smartSwapEnabledKey) ?? false;
-    
+    final promptsRaw = _prefs!.getString(_promptTemplatesKey);
+    if (promptsRaw != null) {
+      _promptTemplates = PromptTemplates.decode(promptsRaw);
+    }
+
     final modeStr = _prefs!.getString(_defaultModeKey);
     if (modeStr != null) {
       _defaultMode = TranslateMode.values.firstWhere(
@@ -117,23 +129,29 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> _saveProviders() async {
-    await _prefs?.setString(_providersKey, ProviderConfig.encodeList(_providers));
+    await _prefs?.setString(
+      _providersKey,
+      ProviderConfig.encodeList(_providers),
+    );
   }
 
   Future<void> _saveActions() async {
-    await _prefs?.setString(_actionsKey, CustomAction.encodeList(_customActions));
+    await _prefs?.setString(
+      _actionsKey,
+      CustomAction.encodeList(_customActions),
+    );
   }
 
   // Provider management
   Future<void> addProvider(ProviderConfig provider) async {
     _providers.add(provider);
     await _saveProviders();
-    
+
     // If this is the first provider, make it default
     if (_providers.length == 1) {
       await setDefaultProvider(provider.id);
     }
-    
+
     notifyListeners();
   }
 
@@ -142,12 +160,12 @@ class SettingsProvider extends ChangeNotifier {
     if (index >= 0) {
       _providers[index] = provider;
       await _saveProviders();
-      
+
       // Update translation service if this is the active provider
       if (provider.id == _defaultProviderId) {
         _translationService.setProvider(provider);
       }
-      
+
       notifyListeners();
     }
   }
@@ -155,30 +173,30 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> removeProvider(String id) async {
     _providers.removeWhere((p) => p.id == id);
     await _saveProviders();
-    
+
     // If we removed the default provider, select a new one
     if (_defaultProviderId == id) {
       _defaultProviderId = _providers.isNotEmpty ? _providers.first.id : null;
       await _prefs?.setString(_defaultProviderKey, _defaultProviderId ?? '');
-      
+
       final provider = defaultProvider;
       if (provider != null) {
         _translationService.setProvider(provider);
       }
     }
-    
+
     notifyListeners();
   }
 
   Future<void> setDefaultProvider(String id) async {
     _defaultProviderId = id;
     await _prefs?.setString(_defaultProviderKey, id);
-    
+
     final provider = defaultProvider;
     if (provider != null) {
       _translationService.setProvider(provider);
     }
-    
+
     notifyListeners();
   }
 
@@ -266,13 +284,27 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updatePromptTemplates(PromptTemplates templates) async {
+    _promptTemplates = templates;
+    await _prefs?.setString(
+      _promptTemplatesKey,
+      PromptTemplates.encode(templates),
+    );
+    _translationService.setPromptTemplates(_promptTemplates);
+    notifyListeners();
+  }
+
+  Future<void> resetPromptTemplates() async {
+    await updatePromptTemplates(PromptTemplates.defaults());
+  }
+
   /// Get the appropriate target language based on detected input language.
   /// Returns null if smart swap is disabled or detection doesn't match.
   String? getSmartTargetLanguage(String detectedLanguage) {
     if (!_smartSwapEnabled) return null;
-    
+
     // Check if detected matches native or secondary
-    if (detectedLanguage == _nativeLanguage || 
+    if (detectedLanguage == _nativeLanguage ||
         (detectedLanguage == 'zh' && _nativeLanguage == 'zh-TW') ||
         (detectedLanguage == 'zh-TW' && _nativeLanguage == 'zh')) {
       // Native language detected -> translate to secondary
@@ -281,7 +313,7 @@ class SettingsProvider extends ChangeNotifier {
       // Secondary language detected -> translate to native
       return _nativeLanguage;
     }
-    
+
     return null;
   }
 

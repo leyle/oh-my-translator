@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../models/language.dart';
 import '../../models/provider_config.dart';
+import '../../models/prompt_templates.dart';
 import 'base_engine.dart';
 
 /// Available model info returned from API
@@ -22,9 +23,13 @@ class ModelInfo {
 /// - Any OpenAI-compatible endpoint
 class OpenAICompatibleEngine extends BaseEngine {
   final ProviderConfig config;
+  final PromptTemplates promptTemplates;
   http.Client? _client;
 
-  OpenAICompatibleEngine({required this.config});
+  OpenAICompatibleEngine({
+    required this.config,
+    PromptTemplates? promptTemplates,
+  }) : promptTemplates = promptTemplates ?? PromptTemplates.defaults();
 
   http.Client get client => _client ??= http.Client();
 
@@ -251,34 +256,19 @@ class OpenAICompatibleEngine extends BaseEngine {
     required String targetLanguage,
   }) async* {
     final systemPrompt =
-        '''You are an expert linguist and language teacher.
-Your task is to explain a selected word or phrase in the context of a given sentence.
-Respond in $targetLanguage.
+        _renderTemplate(promptTemplates.explainInContextSystem, {
+          'selectedWord': selectedWord,
+          'fullContext': fullContext,
+          'sourceLanguage': sourceLanguage,
+          'targetLanguage': targetLanguage,
+        });
 
-Format your response as follows:
-
-**$selectedWord** · /pronunciation/
-
-**词义（结合句子）**
-Explain what "$selectedWord" means IN THE CONTEXT of this specific sentence.
-
-**句子含义**
-"$fullContext"
-Provide the full translation/meaning of the sentence.
-
-**是否为习语**
-Indicate whether the word is part of an idiom. If yes, explain the idiom.
-
----
-
-### 例句（相同含义）
-Provide 3-5 example sentences using "$selectedWord" with the same meaning as in the context.
-Include translations for each example.''';
-
-    final userPrompt =
-        '''Please explain the word "$selectedWord" in the context of this sentence:
-
-"$fullContext"''';
+    final userPrompt = _renderTemplate(promptTemplates.explainInContextUser, {
+      'selectedWord': selectedWord,
+      'fullContext': fullContext,
+      'sourceLanguage': sourceLanguage,
+      'targetLanguage': targetLanguage,
+    });
 
     final url = _buildChatCompletionsUrl();
     final headers = _buildHeaders();
@@ -476,36 +466,19 @@ Include translations for each example.''';
     if (langLower.contains('chinese') ||
         langLower == 'zh' ||
         langLower == 'zh-tw') {
-      return '''
-- Use contemporary, natural Chinese expressions that native speakers commonly use
-- For technical terms (especially AI/tech), prefer widely-adopted Chinese translations:
-  * "agentic AI" → "智能体AI" or "AI智能体" (not "代理式AI")
-  * "large language model" → "大语言模型" or "大模型"
-  * "machine learning" → "机器学习"
-  * "neural network" → "神经网络"
-- Maintain proper Chinese punctuation (。，！？etc.)
-- Ensure the translation reads naturally to native Chinese speakers''';
+      return promptTemplates.languageGuidanceChinese;
     }
 
     if (langLower.contains('japanese') || langLower == 'ja') {
-      return '''
-- Use natural Japanese expressions appropriate to the context
-- Choose between formal (です/ます) or casual form based on the source text's tone
-- Use appropriate kanji vs hiragana balance for readability
-- Maintain proper Japanese punctuation''';
+      return promptTemplates.languageGuidanceJapanese;
     }
 
     if (langLower.contains('korean') || langLower == 'ko') {
-      return '''
-- Use natural Korean expressions
-- Match the formality level of the source text
-- Use appropriate Hangul and proper spacing''';
+      return promptTemplates.languageGuidanceKorean;
     }
 
     // Default guidance for other languages
-    return '''
-- Use natural, idiomatic expressions that native speakers would use
-- Maintain appropriate formality level based on the source text''';
+    return promptTemplates.languageGuidanceDefault;
   }
 
   String _buildSystemPrompt(
@@ -515,102 +488,23 @@ Include translations for each example.''';
   ) {
     switch (mode) {
       case TranslateMode.translate:
-        final languageGuidance = _getLanguageGuidance(targetLang);
-        return '''You are an expert translator with deep fluency in both $sourceLang and $targetLang.
-
-Your task: Translate the given text from $sourceLang to $targetLang.
-
-Translation guidelines:
-- Produce natural, idiomatic translations that sound native
-- Preserve the original meaning, tone, and intent precisely
-- Use terminology and expressions that native $targetLang speakers commonly use
-- Do NOT translate literally if it would sound unnatural
-$languageGuidance
-
-Output rules:
-- Return ONLY the translated text
-- No explanations, notes, or additional commentary
-- Maintain original formatting (paragraphs, line breaks, etc.)
-- Include proper punctuation appropriate for $targetLang''';
+        return _renderTemplate(promptTemplates.translateSystem, {
+          'sourceLanguage': sourceLang,
+          'targetLanguage': targetLang,
+          'languageGuidance': _getLanguageGuidance(targetLang),
+        });
 
       case TranslateMode.explain:
-        // Enhanced context-aware explanation
-        return '''You are an expert linguist and language teacher. 
-Your task is to provide comprehensive explanations in $targetLang.
-
-For SINGLE WORDS, act as a professional dictionary.
-Structure your response exactly as follows using Markdown:
-
-### 1. Basic Info
-*   **Word**: The word and its original/base form
-*   **Pronunciation**: IPA phonetic notation
-*   **Language**: The source language
-
-### 2. Meaning & Usage
-*   **Parts of Speech**: All senses with their parts of speech
-*   **Collocations**: Frequently used word combinations
-*   **Etymology**: Brief word origin
-
-### 3. Example Sentences
-Provide 3 bilingual examples.
-**CRITICAL RULE**: In the examples, **ONLY** bold the specific target word. Do NOT bold the entire sentence.
-*   Example: I love **apples** because they are sweet.
-
-For PHRASES or IDIOMS:
-### 1. The Phrase
-*   **Literal Meaning**: Word-by-word translation
-*   **Actual Meaning**: The idiomatic or contextual meaning
-
-### 2. Context
-*   **Origin**: Historical or cultural background
-*   **Usage**: When and how to use this phrase
-*   **Similar Expressions**: Related phrases
-
-### 3. Examples
-Provide 2 examples. **ONLY** bold the target phrase.
-
-For SENTENCES:
-### 1. Translation
-Full translation to $targetLang
-
-### 2. Breakdown
-*   **Key Vocabulary**: Definitions
-*   **Grammar**: Sentence structure analysis
-
-### 3. Cultural Context
-Any cultural nuances or implications.''';
+        return _renderTemplate(promptTemplates.explainSystem, {
+          'sourceLanguage': sourceLang,
+          'targetLanguage': targetLang,
+        });
 
       case TranslateMode.polish:
-        return '''You are an expert linguistic engine with two modes of operation based on the language of the input text.
-
-1. **IF THE INPUT IS ENGLISH**:
-   Act as an experienced IELTS examiner and English tutor (Band 9.0).
-   Your goal is to help the user achieve a Band 7.0+ score.
-   
-   Output format:
-   ### Polished Version
-   [Refined English text using academic vocabulary and varied sentence structures]
-
-   ### IELTS Analysis (Band 7.0+)
-   *   **Vocabulary**: Explain key word upgrades (e.g., "changed 'good' to 'beneficial'").
-   *   **Grammar**: Highlight complex structures used.
-   *   **Cohesion**: Note improvements in flow.
-
-   ### Why It's Better
-   Brief explanation of score improvement.
-
-2. **IF THE INPUT IS NOT ENGLISH**:
-   Act as a professional editor and writing coach.
-   Improve the text while maintaining the original language.
-   Focus on:
-   - Clarity and conciseness
-   - Grammar and punctuation
-   - Word choice and vocabulary
-   - Sentence structure and flow
-   - Maintaining the original meaning and tone
-   
-   Output format:
-   [Return ONLY the polished text, no explanations]''';
+        return _renderTemplate(promptTemplates.polishSystem, {
+          'sourceLanguage': sourceLang,
+          'targetLanguage': targetLang,
+        });
     }
   }
 
@@ -622,36 +516,50 @@ Any cultural nuances or implications.''';
   ) {
     switch (mode) {
       case TranslateMode.translate:
-        return text;
+        return _renderTemplate(promptTemplates.translateUser, {
+          'text': text,
+          'sourceLanguage': sourceLang,
+          'targetLanguage': targetLang,
+        });
       case TranslateMode.explain:
         // Detect if single word, phrase, or sentence
         final trimmedText = text.trim();
         final wordCount = trimmedText.split(RegExp(r'\s+')).length;
 
         if (wordCount == 1) {
-          return '''Please provide a comprehensive dictionary-style explanation for this word:
-
-**$trimmedText**
-
-Include pronunciation, all meanings with parts of speech, example sentences, etymology, and related words.''';
+          return _renderTemplate(promptTemplates.explainWordUser, {
+            'text': trimmedText,
+            'sourceLanguage': sourceLang,
+            'targetLanguage': targetLang,
+          });
         } else if (wordCount <= 5) {
-          return '''Please explain this phrase or expression:
-
-**$trimmedText**
-
-Include the literal meaning, actual/idiomatic meaning, usage context, and example sentences.''';
+          return _renderTemplate(promptTemplates.explainPhraseUser, {
+            'text': trimmedText,
+            'sourceLanguage': sourceLang,
+            'targetLanguage': targetLang,
+          });
         } else {
-          return '''Please provide a comprehensive explanation of this text:
-
----
-$trimmedText
----
-
-Include translation, vocabulary breakdown, grammar analysis, and cultural context if relevant.''';
+          return _renderTemplate(promptTemplates.explainTextUser, {
+            'text': trimmedText,
+            'sourceLanguage': sourceLang,
+            'targetLanguage': targetLang,
+          });
         }
       case TranslateMode.polish:
-        return text; // System prompt handles the instructions
+        return _renderTemplate(promptTemplates.polishUser, {
+          'text': text,
+          'sourceLanguage': sourceLang,
+          'targetLanguage': targetLang,
+        });
     }
+  }
+
+  String _renderTemplate(String template, Map<String, String> variables) {
+    return template.replaceAllMapped(RegExp(r'\{([a-zA-Z0-9_]+)\}'), (match) {
+      final key = match.group(1);
+      if (key == null) return match.group(0) ?? '';
+      return variables[key] ?? (match.group(0) ?? '');
+    });
   }
 
   @override
