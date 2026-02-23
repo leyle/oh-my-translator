@@ -7,7 +7,7 @@ class TranslationHistoryItem {
   final String outputText;
   final String sourceLanguage;
   final String targetLanguage;
-  final String mode; // 'translate' or 'polish'
+  final String mode; // 'translate' or 'explain'
   final DateTime timestamp;
 
   TranslationHistoryItem({

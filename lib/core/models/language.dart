@@ -26,7 +26,6 @@ class Language {
 enum TranslateMode {
   translate,  // Basic translation
   explain,    // Context-aware explanation
-  polish,     // Improve writing style
 }
 
 extension TranslateModeExtension on TranslateMode {
@@ -36,8 +35,6 @@ extension TranslateModeExtension on TranslateMode {
         return 'Translate';
       case TranslateMode.explain:
         return 'Explain';
-      case TranslateMode.polish:
-        return 'Polish';
     }
   }
 
@@ -47,8 +44,6 @@ extension TranslateModeExtension on TranslateMode {
         return 'Translate text between languages';
       case TranslateMode.explain:
         return 'Explain words or phrases in context';
-      case TranslateMode.polish:
-        return 'Improve writing clarity and style';
     }
   }
 }

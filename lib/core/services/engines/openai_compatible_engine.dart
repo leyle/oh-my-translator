@@ -504,12 +504,6 @@ class OpenAICompatibleEngine extends BaseEngine {
           'sourceLanguage': sourceLang,
           'targetLanguage': targetLang,
         });
-
-      case TranslateMode.polish:
-        return _renderTemplate(promptTemplates.polishSystem, {
-          'sourceLanguage': sourceLang,
-          'targetLanguage': targetLang,
-        });
     }
   }
 
@@ -550,12 +544,6 @@ class OpenAICompatibleEngine extends BaseEngine {
             'targetLanguage': targetLang,
           });
         }
-      case TranslateMode.polish:
-        return _renderTemplate(promptTemplates.polishUser, {
-          'text': text,
-          'sourceLanguage': sourceLang,
-          'targetLanguage': targetLang,
-        });
     }
   }
 

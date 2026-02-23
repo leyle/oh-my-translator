@@ -603,7 +603,6 @@ class _TranslatePageState extends State<TranslatePage> {
               // Mode selector
               _buildModeChip(context, TranslateMode.translate, translation),
               const SizedBox(width: 8),
-              _buildModeChip(context, TranslateMode.polish, translation),
               
               // Language selectors (only for translate mode)
               if (translation.mode == TranslateMode.translate) ...[
@@ -1085,7 +1084,7 @@ class _TranslatePageState extends State<TranslatePage> {
           if (item.mode == 'translate') {
             translation.setMode(TranslateMode.translate);
           } else {
-            translation.setMode(TranslateMode.polish);
+            translation.setMode(TranslateMode.explain);
           }
           translation.setResult(item.outputText);
           Navigator.of(dialogContext).pop();

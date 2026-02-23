@@ -9,7 +9,7 @@ abstract class BaseEngine {
   /// - [text]: The text to translate/process
   /// - [sourceLanguage]: Source language code (or 'auto' for detection)
   /// - [targetLanguage]: Target language code
-  /// - [mode]: Translation mode (translate, explain, polish)
+  /// - [mode]: Translation mode (translate, explain)
   /// 
   /// Returns a stream of text chunks for real-time display
   Stream<String> translate({

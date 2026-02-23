@@ -10,9 +10,6 @@ class PromptTemplates {
   final String explainPhraseUser;
   final String explainTextUser;
 
-  final String polishSystem;
-  final String polishUser;
-
   final String explainInContextSystem;
   final String explainInContextUser;
 
@@ -28,8 +25,6 @@ class PromptTemplates {
     required this.explainWordUser,
     required this.explainPhraseUser,
     required this.explainTextUser,
-    required this.polishSystem,
-    required this.polishUser,
     required this.explainInContextSystem,
     required this.explainInContextUser,
     required this.languageGuidanceDefault,
@@ -47,9 +42,12 @@ Your task: Translate the given text from {sourceLanguage} to {targetLanguage}.
 
 Translation guidelines:
 - Produce natural, idiomatic translations that sound native
-- Preserve the original meaning, tone, and intent precisely
-- Use terminology and expressions that native {targetLanguage} speakers commonly use
-- Do NOT translate literally if it would sound unnatural
+- Preserve the original meaning, tone, emotion, and communicative intent precisely
+- **Identify the tone first**: Recognize sarcasm, frustration, humor, formality, criticism, or rhetorical devices (especially rhetorical questions used for criticism or disbelief)
+- **Translate the function, not just the words**: If a rhetorical question expresses criticism or disbelief, maintain that function in English
+- Use terminology and expressions that native {targetLanguage} speakers would naturally use in the same emotional context
+- Match the register: keep informal speech informal, formal speech formal
+- Do NOT translate literally if it would sound unnatural or lose the original tone
 {languageGuidance}
 
 Output rules:
@@ -121,38 +119,6 @@ Include the literal meaning, actual/idiomatic meaning, usage context, and exampl
 ---
 
 Include translation, vocabulary breakdown, grammar analysis, and cultural context if relevant.''',
-      polishSystem:
-          '''You are an expert linguistic engine with two modes of operation based on the language of the input text.
-
-1. **IF THE INPUT IS ENGLISH**:
-   Act as an experienced IELTS examiner and English tutor (Band 9.0).
-   Your goal is to help the user achieve a Band 7.0+ score.
-   
-   Output format:
-   ### Polished Version
-   [Refined English text using academic vocabulary and varied sentence structures]
-
-   ### IELTS Analysis (Band 7.0+)
-   *   **Vocabulary**: Explain key word upgrades (e.g., "changed 'good' to 'beneficial'").
-   *   **Grammar**: Highlight complex structures used.
-   *   **Cohesion**: Note improvements in flow.
-
-   ### Why It's Better
-   Brief explanation of score improvement.
-
-2. **IF THE INPUT IS NOT ENGLISH**:
-   Act as a professional editor and writing coach.
-   Improve the text while maintaining the original language.
-   Focus on:
-   - Clarity and conciseness
-   - Grammar and punctuation
-   - Word choice and vocabulary
-   - Sentence structure and flow
-   - Maintaining the original meaning and tone
-   
-   Output format:
-   [Return ONLY the polished text, no explanations]''',
-      polishUser: '{text}',
       explainInContextSystem:
           '''You are an expert linguist and language teacher.
 Your task is to explain a selected word or phrase in the context of a given sentence.
@@ -211,8 +177,6 @@ Include translations for each example.''',
     String? explainWordUser,
     String? explainPhraseUser,
     String? explainTextUser,
-    String? polishSystem,
-    String? polishUser,
     String? explainInContextSystem,
     String? explainInContextUser,
     String? languageGuidanceDefault,
@@ -227,8 +191,6 @@ Include translations for each example.''',
       explainWordUser: explainWordUser ?? this.explainWordUser,
       explainPhraseUser: explainPhraseUser ?? this.explainPhraseUser,
       explainTextUser: explainTextUser ?? this.explainTextUser,
-      polishSystem: polishSystem ?? this.polishSystem,
-      polishUser: polishUser ?? this.polishUser,
       explainInContextSystem:
           explainInContextSystem ?? this.explainInContextSystem,
       explainInContextUser: explainInContextUser ?? this.explainInContextUser,
@@ -250,8 +212,6 @@ Include translations for each example.''',
     'explainWordUser': explainWordUser,
     'explainPhraseUser': explainPhraseUser,
     'explainTextUser': explainTextUser,
-    'polishSystem': polishSystem,
-    'polishUser': polishUser,
     'explainInContextSystem': explainInContextSystem,
     'explainInContextUser': explainInContextUser,
     'languageGuidanceDefault': languageGuidanceDefault,
@@ -273,8 +233,6 @@ Include translations for each example.''',
           json['explainPhraseUser'] as String? ?? defaults.explainPhraseUser,
       explainTextUser:
           json['explainTextUser'] as String? ?? defaults.explainTextUser,
-      polishSystem: json['polishSystem'] as String? ?? defaults.polishSystem,
-      polishUser: json['polishUser'] as String? ?? defaults.polishUser,
       explainInContextSystem:
           json['explainInContextSystem'] as String? ??
           defaults.explainInContextSystem,

@@ -30,7 +30,7 @@ class CliArgsHandler {
     final parser = ArgParser()
       ..addOption('to', abbr: 't', help: 'Target language code')
       ..addOption('mode', abbr: 'm', help: 'Translation mode', 
-          allowed: ['translate', 'explain', 'polish'],
+          allowed: ['translate', 'explain'],
           defaultsTo: 'translate');
 
     try {

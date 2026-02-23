@@ -6,15 +6,17 @@ AI-powered translation tool for macOS with multi-provider support.
 
 ### Translation Modes
 - **Translate** - Full text translation
-- **Polish** - Improve writing style and grammar
 - **Explain** - Context-aware word/phrase explanations with IPA pronunciation
 
 ### Multi-Provider Support
-Works with any OpenAI-compatible API:
+Pre-configured with default AI provider presets:
 - OpenAI
 - OpenRouter
-- Vercel AI Gateway
-- Any OpenAI-compatible endpoint
+- Gemini (OpenAI)
+- AIHubMix
+- Vercel AI
+
+Works with any OpenAI-compatible API endpoint.
 
 ### Smart Features
 - **Model-aware caching** - LRU cache that invalidates on model change
@@ -32,6 +34,12 @@ Works with any OpenAI-compatible API:
 - Dark mode support
 - Persistent window size
 - Drag-and-drop action reordering
+
+## Recent Updates
+
+- **New AI Providers**: Added built-in presets for AIHubMix and Vercel AI.
+- **Streamlined UI**: Removed the "Polish" translation mode to focus on core translation and explanation capabilities.
+- **Enhanced Prompts**: Completely revamped the default translation system prompt to better identify tone, preserve emotional intent, and handle rhetorical devices.
 
 ## Requirements
 
@@ -98,6 +106,8 @@ Go to Settings (gear icon) to:
 - Enable/disable providers
 
 ## Acknowledgments
+
+Special thanks to **AIHubMix** for providing a 10% discount on their services!
 
 This project was inspired by and learned from:
 

@@ -488,7 +488,7 @@ class SettingsPage extends StatelessWidget {
         leading: const Icon(LucideIcons.messageSquareText),
         title: const Text('Edit Prompt Templates'),
         subtitle: const Text(
-          'Configure translate, explain, polish, and context prompts',
+          'Configure translate, explain, and context prompts',
         ),
         trailing: const Icon(LucideIcons.chevronRight),
         onTap: () => _editPromptTemplates(context, settings),
@@ -845,8 +845,6 @@ class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
   late TextEditingController _explainWordUserController;
   late TextEditingController _explainPhraseUserController;
   late TextEditingController _explainTextUserController;
-  late TextEditingController _polishSystemController;
-  late TextEditingController _polishUserController;
   late TextEditingController _contextSystemController;
   late TextEditingController _contextUserController;
   late TextEditingController _guidanceDefaultController;
@@ -880,10 +878,6 @@ class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
     _explainTextUserController = TextEditingController(
       text: templates.explainTextUser,
     );
-    _polishSystemController = TextEditingController(
-      text: templates.polishSystem,
-    );
-    _polishUserController = TextEditingController(text: templates.polishUser);
     _contextSystemController = TextEditingController(
       text: templates.explainInContextSystem,
     );
@@ -912,8 +906,6 @@ class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
       explainWordUser: _explainWordUserController.text,
       explainPhraseUser: _explainPhraseUserController.text,
       explainTextUser: _explainTextUserController.text,
-      polishSystem: _polishSystemController.text,
-      polishUser: _polishUserController.text,
       explainInContextSystem: _contextSystemController.text,
       explainInContextUser: _contextUserController.text,
       languageGuidanceDefault: _guidanceDefaultController.text,
@@ -947,8 +939,6 @@ class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
       _explainWordUserController.text = defaults.explainWordUser;
       _explainPhraseUserController.text = defaults.explainPhraseUser;
       _explainTextUserController.text = defaults.explainTextUser;
-      _polishSystemController.text = defaults.polishSystem;
-      _polishUserController.text = defaults.polishUser;
       _contextSystemController.text = defaults.explainInContextSystem;
       _contextUserController.text = defaults.explainInContextUser;
       _guidanceDefaultController.text = defaults.languageGuidanceDefault;
@@ -998,8 +988,6 @@ class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
     _explainWordUserController.dispose();
     _explainPhraseUserController.dispose();
     _explainTextUserController.dispose();
-    _polishSystemController.dispose();
-    _polishUserController.dispose();
     _contextSystemController.dispose();
     _contextUserController.dispose();
     _guidanceDefaultController.dispose();
@@ -1014,6 +1002,14 @@ class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Prompt Templates'),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leadingWidth: 100,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 70),
+          child: BackButton(onPressed: () => Navigator.pop(context)),
+        ),
         actions: [
           TextButton(
             onPressed: _isSaving ? null : _resetToDefaults,
@@ -1061,18 +1057,6 @@ class _PromptTemplatesPageState extends State<PromptTemplatesPage> {
           _buildEditor(
             'Explain User Prompt (Text)',
             _explainTextUserController,
-          ),
-          const SizedBox(height: 16),
-          _buildEditor(
-            'Polish System Prompt',
-            _polishSystemController,
-            minLines: 8,
-          ),
-          const SizedBox(height: 12),
-          _buildEditor(
-            'Polish User Prompt',
-            _polishUserController,
-            minLines: 3,
           ),
           const SizedBox(height: 16),
           _buildEditor(
