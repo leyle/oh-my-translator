@@ -1171,6 +1171,20 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
       apiPath: '/chat/completions',
       model: 'gemini-2.5-flash',
     ),
+    _ProviderPreset(
+      label: 'AIHubMix',
+      name: 'AIHubMix',
+      apiUrl: 'https://aihubmix.com/v1',
+      apiPath: '/chat/completions',
+      model: 'gpt-4o',
+    ),
+    _ProviderPreset(
+      label: 'Vercel AI',
+      name: 'Vercel AI',
+      apiUrl: 'https://ai-gateway.vercel.sh/v1',
+      apiPath: '/chat/completions',
+      model: 'openai/gpt-5.2',
+    ),
   ];
 
   late TextEditingController _nameController;

@@ -377,6 +377,11 @@ class OpenAICompatibleEngine extends BaseEngine {
       'Accept': 'text/event-stream',
       ...config.customHeaders,
     };
+
+    if (config.apiUrl.contains('aihubmix.com')) {
+      headers['APP-Code'] = 'TUCU0341';
+    }
+
     return headers;
   }
 
