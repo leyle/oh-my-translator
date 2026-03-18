@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -14,10 +15,7 @@ import 'toast.dart';
 /// A wrapper widget that provides a floating action bar when text is selected.
 /// Shows Copy and configured custom actions (shell scripts).
 class SelectableWithActions extends StatefulWidget {
-  const SelectableWithActions({
-    super.key,
-    required this.child,
-  });
+  const SelectableWithActions({super.key, required this.child});
 
   final Widget child;
 
@@ -28,7 +26,6 @@ class SelectableWithActions extends StatefulWidget {
 class _SelectableWithActionsState extends State<SelectableWithActions> {
   String? _selectedText;
   OverlayEntry? _overlayEntry;
-  final LayerLink _layerLink = LayerLink();
   Timer? _hideTimer;
   Offset? _lastTapPosition;
 
@@ -50,18 +47,15 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
   }
 
   void _showActionBar(Offset position) {
-    print('_showActionBar called at position: $position');
     _hideOverlay();
     _hideTimer?.cancel();
 
     final settings = context.read<SettingsProvider>();
     final actions = settings.enabledActions;
-    print('Enabled actions count: ${actions.length}');
 
     _overlayEntry = OverlayEntry(
       builder: (context) => _SelectionActionBar(
         position: position,
-        layerLink: _layerLink,
         selectedText: _selectedText ?? '',
         actions: actions,
         onRunAction: _runAction,
@@ -71,7 +65,6 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
       ),
     );
     Overlay.of(context).insert(_overlayEntry!);
-    print('Overlay inserted');
 
     // Auto-hide after 5 seconds of inactivity
     _startHideTimer();
@@ -98,15 +91,16 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
     _hideTimer?.cancel();
 
     try {
-      final result = await Process.run(
-        action.scriptPath,
-        [_selectedText!],
-        runInShell: true,
-      );
-      
+      final result = await Process.run(action.scriptPath, [
+        _selectedText!,
+      ], runInShell: true);
+
       if (result.exitCode != 0 && mounted) {
         final stderr = result.stderr.toString().trim();
-        Toast.error(context, '${action.name}: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}');
+        Toast.error(
+          context,
+          '${action.name}: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -130,49 +124,51 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
       return widget.child;
     }
 
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (event) {
-          _lastTapPosition = event.position;
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        _lastTapPosition = event.position;
+      },
+      onPointerMove: (event) {
+        _lastTapPosition = event.position;
+      },
+      onPointerUp: (event) {
+        _lastTapPosition = event.position;
+      },
+      child: SelectionArea(
+        // Suppress system context menu and PopClip by returning empty widget
+        contextMenuBuilder: (context, selectableRegionState) =>
+            const SizedBox.shrink(),
+        onSelectionChanged: (content) {
+          _hideTimer?.cancel();
+
+          if (content != null && content.plainText.trim().isNotEmpty) {
+            _selectedText = content.plainText;
+            final position =
+                _lastTapPosition ??
+                Offset(
+                  MediaQuery.of(context).size.width / 2,
+                  MediaQuery.of(context).size.height / 2,
+                );
+
+            // Debounce to let selection stabilize
+            _hideTimer = Timer(const Duration(milliseconds: 150), () {
+              if (mounted &&
+                  _selectedText != null &&
+                  _selectedText!.isNotEmpty) {
+                _showActionBar(position);
+              }
+            });
+          } else {
+            _selectedText = null;
+            _hideTimer = Timer(const Duration(milliseconds: 250), () {
+              if (_selectedText == null || _selectedText!.isEmpty) {
+                _hideOverlay();
+              }
+            });
+          }
         },
-        onPointerMove: (event) {
-          _lastTapPosition = event.position;
-        },
-        onPointerUp: (event) {
-          _lastTapPosition = event.position;
-        },
-        child: SelectionArea(
-          // Suppress system context menu and PopClip by returning empty widget
-          contextMenuBuilder: (context, selectableRegionState) => const SizedBox.shrink(),
-          onSelectionChanged: (content) {
-            print('onSelectionChanged called: ${content?.plainText}');
-            _hideTimer?.cancel();
-            
-            if (content != null && content.plainText.trim().isNotEmpty) {
-              _selectedText = content.plainText;
-              final position = _lastTapPosition ?? 
-                  Offset(MediaQuery.of(context).size.width / 2, MediaQuery.of(context).size.height / 2);
-              print('Selection detected: $_selectedText at $position');
-              
-              // Debounce to let selection stabilize
-              _hideTimer = Timer(const Duration(milliseconds: 150), () {
-                if (mounted && _selectedText != null && _selectedText!.isNotEmpty) {
-                  _showActionBar(position);
-                }
-              });
-            } else {
-              _selectedText = null;
-              _hideTimer = Timer(const Duration(milliseconds: 250), () {
-                if (_selectedText == null || _selectedText!.isEmpty) {
-                  _hideOverlay();
-                }
-              });
-            }
-          },
-          child: widget.child,
-        ),
+        child: widget.child,
       ),
     );
   }
@@ -182,7 +178,6 @@ class _SelectableWithActionsState extends State<SelectableWithActions> {
 class _SelectionActionBar extends StatefulWidget {
   const _SelectionActionBar({
     required this.position,
-    required this.layerLink,
     required this.selectedText,
     required this.actions,
     required this.onRunAction,
@@ -192,7 +187,6 @@ class _SelectionActionBar extends StatefulWidget {
   });
 
   final Offset position;
-  final LayerLink layerLink;
   final String selectedText;
   final List<CustomAction> actions;
   final Future<void> Function(CustomAction) onRunAction;
@@ -212,11 +206,11 @@ class _SelectionActionBarState extends State<_SelectionActionBar> {
 
   Future<void> _handleAction(CustomAction action) async {
     if (_isLoading) return;
-    
+
     setState(() {
       _loadingActionId = action.id;
     });
-    
+
     try {
       await widget.onRunAction(action);
       if (mounted) {
@@ -238,18 +232,30 @@ class _SelectionActionBarState extends State<_SelectionActionBar> {
 
   IconData _getIconForAction(String iconName) {
     switch (iconName) {
-      case 'volume2': return LucideIcons.volume2;
-      case 'languages': return LucideIcons.languages;
-      case 'search': return LucideIcons.search;
-      case 'sparkles': return LucideIcons.sparkles;
-      case 'terminal': return LucideIcons.terminal;
-      case 'clipboard': return LucideIcons.clipboard;
-      case 'share': return LucideIcons.share;
-      case 'wand': return LucideIcons.wand;
-      case 'zap': return LucideIcons.zap;
-      case 'send': return LucideIcons.send;
-      case 'external_link': return LucideIcons.externalLink;
-      default: return LucideIcons.play;
+      case 'volume2':
+        return LucideIcons.volume2;
+      case 'languages':
+        return LucideIcons.languages;
+      case 'search':
+        return LucideIcons.search;
+      case 'sparkles':
+        return LucideIcons.sparkles;
+      case 'terminal':
+        return LucideIcons.terminal;
+      case 'clipboard':
+        return LucideIcons.clipboard;
+      case 'share':
+        return LucideIcons.share;
+      case 'wand':
+        return LucideIcons.wand;
+      case 'zap':
+        return LucideIcons.zap;
+      case 'send':
+        return LucideIcons.send;
+      case 'external_link':
+        return LucideIcons.externalLink;
+      default:
+        return LucideIcons.play;
     }
   }
 
@@ -261,8 +267,14 @@ class _SelectionActionBarState extends State<_SelectionActionBar> {
     final barWidth = actionCount * 70.0 + 30;
 
     return Positioned(
-      left: (widget.position.dx - barWidth / 2).clamp(10, MediaQuery.of(context).size.width - barWidth - 10),
-      top: (widget.position.dy - 60).clamp(10, MediaQuery.of(context).size.height - 60),
+      left: (widget.position.dx - barWidth / 2).clamp(
+        10,
+        MediaQuery.of(context).size.width - barWidth - 10,
+      ),
+      top: (widget.position.dy - 60).clamp(
+        10,
+        MediaQuery.of(context).size.height - 60,
+      ),
       child: MouseRegion(
         onEnter: (_) {
           setState(() => _isHovering = true);
@@ -281,7 +293,10 @@ class _SelectionActionBarState extends State<_SelectionActionBar> {
               child: BackdropFilter(
                 filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? Colors.black.withOpacity(0.7)
@@ -327,7 +342,7 @@ class _SelectionActionBarState extends State<_SelectionActionBar> {
 
   Widget _buildActionButton(CustomAction action, ColorScheme cs) {
     final isLoading = _loadingActionId == action.id;
-    
+
     return _ActionButton(
       icon: isLoading ? null : _getIconForAction(action.iconName),
       isLoading: isLoading,
@@ -376,7 +391,9 @@ class _ActionButtonState extends State<_ActionButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
-      cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.enabled
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       child: GestureDetector(
         onTap: widget.enabled ? widget.onTap : null,
         child: AnimatedContainer(

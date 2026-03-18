@@ -1,30 +1,22 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:oh_my_translator/main.dart';
+import 'package:oh_my_translator/core/models/language.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const OhMyTranslatorApp());
+  group('LanguageDetector.detect', () {
+    test('defaults to English for empty text', () {
+      expect(LanguageDetector.detect('   '), 'en');
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('detects Chinese text', () {
+      expect(LanguageDetector.detect('你好，世界'), 'zh');
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('detects Japanese text with kana', () {
+      expect(LanguageDetector.detect('こんにちは世界'), 'ja');
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('detects Korean text', () {
+      expect(LanguageDetector.detect('안녕하세요 세계'), 'ko');
+    });
   });
 }

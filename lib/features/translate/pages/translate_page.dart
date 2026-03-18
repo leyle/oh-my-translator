@@ -39,37 +39,39 @@ class TranslatePage extends StatefulWidget {
 class _TranslatePageState extends State<TranslatePage> {
   late HighlightTextEditingController _inputController;
   final FocusNode _inputFocusNode = FocusNode();
-  
+
   // For resizable input/output areas (0.0 to 1.0 ratio for input area)
   double _inputFlex = 0.2;
-  
+
   // For floating selection toolbar
   OverlayEntry? _selectionOverlay;
   String? _selectedText;
   Offset? _lastPointerPosition;
-  final LayerLink _layerLink = LayerLink();
-  TextSelection? _lastSelection; // Store selection range to restore after action
+  TextSelection?
+  _lastSelection; // Store selection range to restore after action
   Timer? _selectionHideTimer; // Auto-hide timer for input area toolbar
-  
+
   // For URL scheme handling
   late AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
-  
+
   // Track translation state for history recording
   TranslationState? _lastTranslationState;
 
   @override
   void initState() {
     super.initState();
-    _inputController = HighlightTextEditingController(text: widget.initialText ?? '');
-    
+    _inputController = HighlightTextEditingController(
+      text: widget.initialText ?? '',
+    );
+
     // Listen to selection changes
     _inputController.addListener(_onSelectionChanged);
-    
+
     // Initialize URL scheme listener (omt://)
     _appLinks = AppLinks();
     _initDeepLinkListener();
-    
+
     // Listen to translation state changes for history recording
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final translation = context.read<TranslationProvider>();
@@ -82,26 +84,27 @@ class _TranslatePageState extends State<TranslatePage> {
         final translation = context.read<TranslationProvider>();
         final settings = context.read<SettingsProvider>();
         translation.setSourceText(widget.initialText!);
-        
+
         // Set target language if provided, otherwise apply smart swap
         if (widget.targetLanguage != null) {
           translation.setTargetLanguage(widget.targetLanguage!);
-        } else if (settings.smartSwapEnabled && translation.sourceLanguage == 'auto') {
+        } else if (settings.smartSwapEnabled &&
+            translation.sourceLanguage == 'auto') {
           final detectedLanguage = LanguageDetector.detect(widget.initialText!);
           final smartTarget = settings.getSmartTargetLanguage(detectedLanguage);
           if (smartTarget != null) {
             translation.setTargetLanguage(smartTarget);
           }
         }
-        
+
         translation.translate();
       });
     }
   }
-  
+
   void _onTranslationStateChanged(TranslationProvider translation) {
     // Record to history when translation completes
-    if (_lastTranslationState == TranslationState.translating && 
+    if (_lastTranslationState == TranslationState.translating &&
         translation.state == TranslationState.completed &&
         translation.hasResult) {
       final history = context.read<HistoryProvider>();
@@ -115,7 +118,7 @@ class _TranslatePageState extends State<TranslatePage> {
     }
     _lastTranslationState = translation.state;
   }
-  
+
   /// Initialize deep link listener for omt:// URLs
   void _initDeepLinkListener() {
     // Handle initial URI if app was launched via URL (only for fresh launch)
@@ -124,7 +127,7 @@ class _TranslatePageState extends State<TranslatePage> {
         _handleUri(uri);
       }
     });
-    
+
     // Handle app links when app is already running (stream fires AFTER initial)
     // We delay subscription slightly to avoid duplicate handling on launch
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -134,35 +137,36 @@ class _TranslatePageState extends State<TranslatePage> {
       });
     });
   }
-  
+
   /// Parse and handle incoming omt:// URL
   void _handleUri(Uri uri) async {
     // Expected format: omt://translate?text=Hello%20World&to=zh&mode=translate
     final text = uri.queryParameters['text'];
     if (text == null || text.isEmpty) return;
-    
+
     final targetLang = uri.queryParameters['to'];
     // final mode = uri.queryParameters['mode'];
-    
+
     // Bring window to front FIRST
     await windowManager.show();
     await windowManager.focus();
-    
+
     // Update input text
     _inputController.text = text;
-    
+
     // Trigger translation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       final translation = context.read<TranslationProvider>();
       final settings = context.read<SettingsProvider>();
       translation.setSourceText(text);
-      
+
       if (targetLang != null && targetLang.isNotEmpty) {
         // Explicit target language from URL overrides smart swap
         translation.setTargetLanguage(targetLang);
-      } else if (settings.smartSwapEnabled && translation.sourceLanguage == 'auto') {
+      } else if (settings.smartSwapEnabled &&
+          translation.sourceLanguage == 'auto') {
         // Apply smart swap if enabled and no explicit target
         final detectedLanguage = LanguageDetector.detect(text);
         final smartTarget = settings.getSmartTargetLanguage(detectedLanguage);
@@ -170,11 +174,11 @@ class _TranslatePageState extends State<TranslatePage> {
           translation.setTargetLanguage(smartTarget);
         }
       }
-      
+
       translation.translate();
     });
   }
-  
+
   void _onSelectionChanged() {
     final selection = _inputController.selection;
     if (selection.isCollapsed || selection.start == selection.end) {
@@ -185,18 +189,21 @@ class _TranslatePageState extends State<TranslatePage> {
     }
     // Toolbar will be shown on pointer up, not here
   }
-  
+
   void _hideSelectionToolbar() {
     _selectionHideTimer?.cancel();
     _selectionOverlay?.remove();
     _selectionOverlay = null;
   }
-  
+
   void _startSelectionHideTimer() {
     _selectionHideTimer?.cancel();
-    _selectionHideTimer = Timer(const Duration(seconds: 5), _hideSelectionToolbar);
+    _selectionHideTimer = Timer(
+      const Duration(seconds: 5),
+      _hideSelectionToolbar,
+    );
   }
-  
+
   void _handleInputToolbarHover(bool isHovering) {
     if (isHovering) {
       _selectionHideTimer?.cancel();
@@ -204,7 +211,7 @@ class _TranslatePageState extends State<TranslatePage> {
       _startSelectionHideTimer();
     }
   }
-  
+
   void _restoreSelection() {
     if (_lastSelection != null && !_lastSelection!.isCollapsed) {
       // Request focus first, then restore selection
@@ -216,20 +223,20 @@ class _TranslatePageState extends State<TranslatePage> {
       });
     }
   }
-  
+
   void _showSelectionToolbar(Offset position, String selectedText) {
     _hideSelectionToolbar();
-    
+
     // Store selected text for deselection detection
     _selectedText = selectedText;
-    
+
     // Store current selection range for restoration and apply highlight
     _lastSelection = _inputController.selection;
     _inputController.setHighlight(_lastSelection!.start, _lastSelection!.end);
-    
+
     final settings = context.read<SettingsProvider>();
     final actions = settings.enabledActions;
-    
+
     _selectionOverlay = OverlayEntry(
       builder: (context) => _SelectionToolbar(
         position: position,
@@ -242,27 +249,30 @@ class _TranslatePageState extends State<TranslatePage> {
         onHover: _handleInputToolbarHover,
       ),
     );
-    
+
     Overlay.of(context).insert(_selectionOverlay!);
-    
+
     // Start auto-hide timer
     _startSelectionHideTimer();
   }
-  
+
   void _explainSelectedText(String selectedWord) {
     final translation = context.read<TranslationProvider>();
     final fullText = _inputController.text;
-    
+
     // Don't change mode - just explain in context without switching UI mode
-    translation.explainInContext(selectedWord: selectedWord, fullContext: fullText);
-    
+    translation.explainInContext(
+      selectedWord: selectedWord,
+      fullContext: fullText,
+    );
+
     // Restore selection then hide toolbar
     _restoreSelection();
     Future.delayed(const Duration(milliseconds: 100), () {
       _hideSelectionToolbar();
     });
   }
-  
+
   void _copySelectedText(String text) {
     Clipboard.setData(ClipboardData(text: text));
     _restoreSelection();
@@ -288,31 +298,34 @@ class _TranslatePageState extends State<TranslatePage> {
     final translation = context.read<TranslationProvider>();
     final settings = context.read<SettingsProvider>();
     final text = _inputController.text;
-    
+
     translation.setSourceText(text);
-    
+
     // Apply smart swap if enabled and source is auto-detect
-    if (settings.smartSwapEnabled && translation.sourceLanguage == 'auto' && text.isNotEmpty) {
+    if (settings.smartSwapEnabled &&
+        translation.sourceLanguage == 'auto' &&
+        text.isNotEmpty) {
       final detectedLanguage = LanguageDetector.detect(text);
       final smartTarget = settings.getSmartTargetLanguage(detectedLanguage);
-      
+
       if (smartTarget != null) {
         translation.setTargetLanguage(smartTarget);
       }
     }
-    
+
     translation.translate();
   }
 
-
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return Shortcuts(
       shortcuts: {
         // Cmd+Enter on Mac, Ctrl+Enter on Windows/Linux
-        SingleActivator(LogicalKeyboardKey.enter, meta: Platform.isMacOS, control: !Platform.isMacOS): const TranslateIntent(),
+        SingleActivator(
+          LogicalKeyboardKey.enter,
+          meta: Platform.isMacOS,
+          control: !Platform.isMacOS,
+        ): const TranslateIntent(),
       },
       child: Actions(
         actions: {
@@ -329,7 +342,7 @@ class _TranslatePageState extends State<TranslatePage> {
             children: [
               // Custom title bar for macOS
               _buildTitleBar(context),
-              
+
               // Main content
               Expanded(
                 child: Padding(
@@ -346,10 +359,12 @@ class _TranslatePageState extends State<TranslatePage> {
                           builder: (context, constraints) {
                             // Calculate available height for input + output
                             // Deduct space for button and spacers (approx 60px)
-                            final buttonHeight = 60.0; 
-                            final availableHeight = constraints.maxHeight - buttonHeight;
-                            
-                            final inputHeight = (availableHeight * _inputFlex).clamp(60.0, availableHeight - 60.0);
+                            final buttonHeight = 60.0;
+                            final availableHeight =
+                                constraints.maxHeight - buttonHeight;
+
+                            final inputHeight = (availableHeight * _inputFlex)
+                                .clamp(60.0, availableHeight - 60.0);
                             final outputHeight = availableHeight - inputHeight;
 
                             return Column(
@@ -359,17 +374,23 @@ class _TranslatePageState extends State<TranslatePage> {
                                   height: inputHeight,
                                   child: _buildInputArea(context),
                                 ),
-                                
+
                                 const SizedBox(height: 4),
-                                
+
                                 // Draggable Translate button (resize handle)
                                 SizedBox(
-                                  height: buttonHeight - 8, // Subtract 8 for top/bottom spacers
+                                  height:
+                                      buttonHeight -
+                                      8, // Subtract 8 for top/bottom spacers
                                   child: GestureDetector(
                                     onVerticalDragUpdate: (details) {
                                       setState(() {
-                                        final delta = details.delta.dy / availableHeight;
-                                        _inputFlex = (_inputFlex + delta).clamp(0.1, 0.7);
+                                        final delta =
+                                            details.delta.dy / availableHeight;
+                                        _inputFlex = (_inputFlex + delta).clamp(
+                                          0.1,
+                                          0.7,
+                                        );
                                       });
                                     },
                                     child: MouseRegion(
@@ -378,9 +399,9 @@ class _TranslatePageState extends State<TranslatePage> {
                                     ),
                                   ),
                                 ),
-                                
+
                                 const SizedBox(height: 4),
-                                
+
                                 // Output area
                                 SizedBox(
                                   height: outputHeight,
@@ -391,7 +412,7 @@ class _TranslatePageState extends State<TranslatePage> {
                           },
                         ),
                       ),
-                      
+
                       // Bottom status bar with provider/model
                       _buildStatusBar(context),
                     ],
@@ -430,7 +451,7 @@ class _TranslatePageState extends State<TranslatePage> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  provider != null 
+                  provider != null
                       ? '${provider.name} • ${provider.model}'
                       : 'No provider configured',
                   style: TextStyle(
@@ -448,81 +469,96 @@ class _TranslatePageState extends State<TranslatePage> {
             ),
             itemBuilder: (context) {
               final items = <PopupMenuEntry<String>>[];
-              
+
               for (final p in enabledProviders) {
                 // Provider header
-                items.add(PopupMenuItem<String>(
-                  enabled: false,
-                  height: 32,
-                  child: Text(
-                    p.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: cs.primary,
-                      fontSize: 12,
+                items.add(
+                  PopupMenuItem<String>(
+                    enabled: false,
+                    height: 32,
+                    child: Text(
+                      p.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: cs.primary,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                ));
-                
+                );
+
                 // Models for this provider
-                final models = p.selectedModels.isNotEmpty 
-                    ? p.selectedModels 
+                final models = p.selectedModels.isNotEmpty
+                    ? p.selectedModels
                     : [p.model];
-                    
+
                 for (final model in models) {
-                  final isSelected = provider?.id == p.id && provider?.model == model;
-                  items.add(PopupMenuItem<String>(
-                    value: '${p.id}:$model',
-                    height: 36,
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 12),
-                        if (isSelected)
-                          Icon(LucideIcons.check, size: 14, color: cs.primary)
-                        else
-                          const SizedBox(width: 14),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            model,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                  final isSelected =
+                      provider?.id == p.id && provider?.model == model;
+                  items.add(
+                    PopupMenuItem<String>(
+                      value: '${p.id}:$model',
+                      height: 36,
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 12),
+                          if (isSelected)
+                            Icon(LucideIcons.check, size: 14, color: cs.primary)
+                          else
+                            const SizedBox(width: 14),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              model,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isSelected
+                                    ? FontWeight.w500
+                                    : FontWeight.normal,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ));
+                  );
                 }
-                
+
                 // Divider between providers
                 if (p != enabledProviders.last) {
                   items.add(const PopupMenuDivider(height: 8));
                 }
               }
-              
+
               if (items.isEmpty) {
-                items.add(const PopupMenuItem(
-                  enabled: false,
-                  child: Text('No providers enabled'),
-                ));
+                items.add(
+                  const PopupMenuItem(
+                    enabled: false,
+                    child: Text('No providers enabled'),
+                  ),
+                );
               }
-              
+
               return items;
             },
             onSelected: (value) {
               final parts = value.split(':');
               if (parts.length >= 2) {
                 final providerId = parts[0];
-                final modelId = parts.sublist(1).join(':'); // Handle model names with colons
-                
+                final modelId = parts
+                    .sublist(1)
+                    .join(':'); // Handle model names with colons
+
                 // Update the provider's model and set as default
-                final targetProvider = settings.providers.firstWhere((p) => p.id == providerId);
-                settings.updateProvider(targetProvider.copyWith(model: modelId));
+                final targetProvider = settings.providers.firstWhere(
+                  (p) => p.id == providerId,
+                );
+                settings.updateProvider(
+                  targetProvider.copyWith(model: modelId),
+                );
                 settings.setDefaultProvider(providerId);
-                
+
                 // Auto-refresh with new model after settings update
                 Future.delayed(const Duration(milliseconds: 100), () {
                   final translation = context.read<TranslationProvider>();
@@ -531,7 +567,7 @@ class _TranslatePageState extends State<TranslatePage> {
               }
             },
           ),
-          
+
           const Spacer(),
         ],
       ),
@@ -540,7 +576,7 @@ class _TranslatePageState extends State<TranslatePage> {
 
   Widget _buildTitleBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    
+
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onPanStart: (_) => windowManager.startDragging(),
@@ -577,13 +613,21 @@ class _TranslatePageState extends State<TranslatePage> {
             ),
             // History button
             IconButton(
-              icon: Icon(LucideIcons.history, size: 18, color: cs.onSurface.withOpacity(0.6)),
+              icon: Icon(
+                LucideIcons.history,
+                size: 18,
+                color: cs.onSurface.withOpacity(0.6),
+              ),
               onPressed: () => _showHistoryDialog(context),
               tooltip: 'History',
             ),
             // Settings button on far right
             IconButton(
-              icon: Icon(LucideIcons.settings, size: 18, color: cs.onSurface.withOpacity(0.6)),
+              icon: Icon(
+                LucideIcons.settings,
+                size: 18,
+                color: cs.onSurface.withOpacity(0.6),
+              ),
               onPressed: () => _openSettings(context),
               tooltip: 'Settings',
             ),
@@ -603,7 +647,7 @@ class _TranslatePageState extends State<TranslatePage> {
               // Mode selector
               _buildModeChip(context, TranslateMode.translate, translation),
               const SizedBox(width: 8),
-              
+
               // Language selectors (only for translate mode)
               if (translation.mode == TranslateMode.translate) ...[
                 const SizedBox(width: 16),
@@ -618,7 +662,9 @@ class _TranslatePageState extends State<TranslatePage> {
                   child: Icon(
                     LucideIcons.arrowRight,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
                 _buildLanguageDropdown(
@@ -635,7 +681,11 @@ class _TranslatePageState extends State<TranslatePage> {
     );
   }
 
-  Widget _buildModeChip(BuildContext context, TranslateMode mode, TranslationProvider translation) {
+  Widget _buildModeChip(
+    BuildContext context,
+    TranslateMode mode,
+    TranslationProvider translation,
+  ) {
     final cs = Theme.of(context).colorScheme;
     final isSelected = translation.mode == mode;
 
@@ -677,7 +727,7 @@ class _TranslatePageState extends State<TranslatePage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 160), 
+        constraints: const BoxConstraints(maxWidth: 160),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: cs.surface,
@@ -689,9 +739,9 @@ class _TranslatePageState extends State<TranslatePage> {
           children: [
             Flexible(
               child: Text(
-                currentLang.name, 
+                currentLang.name,
                 style: TextStyle(
-                  fontSize: 13, 
+                  fontSize: 13,
                   color: cs.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
@@ -725,7 +775,9 @@ class _TranslatePageState extends State<TranslatePage> {
                     lang.name,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                       color: isSelected ? cs.primary : cs.onSurface,
                     ),
                   ),
@@ -780,7 +832,7 @@ class _TranslatePageState extends State<TranslatePage> {
         },
         onPointerUp: (event) {
           _lastPointerPosition = event.position;
-          
+
           // Check if there's a selection after a short delay
           Future.delayed(const Duration(milliseconds: 50), () {
             final selection = _inputController.selection;
@@ -809,7 +861,8 @@ class _TranslatePageState extends State<TranslatePage> {
             contentPadding: const EdgeInsets.all(16),
           ),
           // Suppress right-click context menu
-          contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+          contextMenuBuilder: (context, editableTextState) =>
+              const SizedBox.shrink(),
           onChanged: (text) {
             context.read<TranslationProvider>().setSourceText(text);
           },
@@ -820,22 +873,26 @@ class _TranslatePageState extends State<TranslatePage> {
 
   // ... (context menu code skipped) ...
 
-  Future<void> _runCustomAction(CustomAction action, String selectedText) async {
+  Future<void> _runCustomAction(
+    CustomAction action,
+    String selectedText,
+  ) async {
     if (selectedText.isEmpty) return;
 
     try {
-      final result = await Process.run(
-        action.scriptPath,
-        [selectedText],
-        runInShell: true,
-      );
-      
+      final result = await Process.run(action.scriptPath, [
+        selectedText,
+      ], runInShell: true);
+
       // Restore selection after action completes
       _restoreSelection();
-      
+
       if (result.exitCode != 0 && mounted) {
         final stderr = result.stderr.toString().trim();
-        Toast.error(context, '${action.name}: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}');
+        Toast.error(
+          context,
+          '${action.name}: ${stderr.isNotEmpty ? stderr : 'Exit code ${result.exitCode}'}',
+        );
       }
     } catch (e) {
       _restoreSelection();
@@ -875,9 +932,7 @@ class _TranslatePageState extends State<TranslatePage> {
                       size: 18,
                     ),
               label: Text(
-                isTranslating
-                    ? 'Stop'
-                    : translation.mode.displayName,
+                isTranslating ? 'Stop' : translation.mode.displayName,
               ),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -898,6 +953,34 @@ class _TranslatePageState extends State<TranslatePage> {
 
     return Consumer<TranslationProvider>(
       builder: (context, translation, _) {
+        final resultContent = _buildResultMarkdown(
+          context,
+          settings,
+          translation.resultText,
+        );
+        final outputBody = translation.hasError
+            ? Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  translation.errorMessage,
+                  style: TextStyle(color: cs.error, fontSize: 14),
+                ),
+              )
+            : translation.hasResult
+            ? translation.isTranslating
+                  ? resultContent
+                  : SelectableWithActions(child: resultContent)
+            : Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Translation will appear here...',
+                  style: TextStyle(
+                    color: cs.onSurface.withOpacity(0.4),
+                    fontSize: settings.fontSize,
+                  ),
+                ),
+              );
+
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -915,79 +998,7 @@ class _TranslatePageState extends State<TranslatePage> {
                   ),
                 ],
               ),
-              child: translation.hasError
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        translation.errorMessage,
-                        style: TextStyle(color: cs.error, fontSize: 14),
-                      ),
-                    )
-                  : translation.hasResult
-                      ? SelectableWithActions(
-                          child: Markdown(
-                            data: translation.resultText,
-                            padding: const EdgeInsets.all(16),
-                            shrinkWrap: true,
-                            styleSheet: MarkdownStyleSheet(
-                              p: TextStyle(fontSize: settings.fontSize, color: cs.onSurface, height: 1.6),
-                              // Headers - Keep colored for section separation but ensure high contrast
-                              h1: TextStyle(fontSize: settings.fontSize + 6, fontWeight: FontWeight.w800, color: cs.primary, letterSpacing: -0.5),
-                              h2: TextStyle(fontSize: settings.fontSize + 4, fontWeight: FontWeight.w700, color: cs.primary, letterSpacing: -0.5),
-                              h3: TextStyle(fontSize: settings.fontSize + 2, fontWeight: FontWeight.w600, color: cs.primary),
-                              h4: TextStyle(fontSize: settings.fontSize, fontWeight: FontWeight.w600, color: cs.primary),
-                              
-                              // Emphasis - Use Primary Color for selective highlighting (per user request)
-                              strong: TextStyle(fontWeight: FontWeight.bold, color: cs.primary), // Cobalt Blue for highlights
-                              em: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurface), // Standard for italics
-                              
-                              // Code
-                              code: TextStyle(
-                                backgroundColor: cs.surfaceContainerHighest.withOpacity(0.3),
-                                color: cs.onSurface, // Standard text color for code
-                                fontFamily: 'monospace',
-                                fontSize: (settings.fontSize - 1).clamp(12.0, 30.0),
-                              ),
-                              codeblockPadding: const EdgeInsets.all(12),
-                              codeblockDecoration: BoxDecoration(
-                                color: cs.surfaceContainerHighest.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: cs.outline.withOpacity(0.1)),
-                              ),
-                              
-                              // Quotes
-                              blockquote: TextStyle(color: cs.onSurface.withOpacity(0.8), fontStyle: FontStyle.italic),
-                              blockquotePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              blockquoteDecoration: BoxDecoration(
-                                border: Border(left: BorderSide(color: cs.primary.withOpacity(0.5), width: 4)),
-                                color: cs.surfaceContainerHighest.withOpacity(0.3),
-                                borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
-                              ),
-                              
-                              // Lists
-                              listBullet: TextStyle(color: cs.onSurface.withOpacity(0.7)),
-                              
-                              // Links
-                              a: TextStyle(color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary.withOpacity(0.3)),
-                              
-                              // Spacing
-                              blockSpacing: 12.0,
-                              horizontalRuleDecoration: BoxDecoration(
-                                border: Border(top: BorderSide(color: cs.outline.withOpacity(0.2))),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'Translation will appear here...',
-                            style: TextStyle(
-                              color: cs.onSurface.withOpacity(0.4),
-                              fontSize: settings.fontSize,
-                            ),
-                          ),
-                        ),
+              child: outputBody,
             ),
             // Copy button - only show when there's result
             if (translation.hasResult)
@@ -995,14 +1006,21 @@ class _TranslatePageState extends State<TranslatePage> {
                 bottom: 8,
                 right: 8,
                 child: IconButton(
-                  icon: Icon(LucideIcons.copy, size: 16, color: cs.onSurface.withOpacity(0.5)),
+                  icon: Icon(
+                    LucideIcons.copy,
+                    size: 16,
+                    color: cs.onSurface.withOpacity(0.5),
+                  ),
                   onPressed: () => _copyOutputText(translation.resultText),
                   tooltip: 'Copy',
                   style: IconButton.styleFrom(
                     backgroundColor: cs.surface.withOpacity(0.8),
                     padding: const EdgeInsets.all(6),
                   ),
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
                 ),
               ),
           ],
@@ -1010,16 +1028,104 @@ class _TranslatePageState extends State<TranslatePage> {
       },
     );
   }
-  
+
+  Widget _buildResultMarkdown(
+    BuildContext context,
+    SettingsProvider settings,
+    String resultText,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Markdown(
+      data: resultText,
+      padding: const EdgeInsets.all(16),
+      shrinkWrap: true,
+      styleSheet: MarkdownStyleSheet(
+        p: TextStyle(
+          fontSize: settings.fontSize,
+          color: cs.onSurface,
+          height: 1.6,
+        ),
+        h1: TextStyle(
+          fontSize: settings.fontSize + 6,
+          fontWeight: FontWeight.w800,
+          color: cs.primary,
+          letterSpacing: -0.5,
+        ),
+        h2: TextStyle(
+          fontSize: settings.fontSize + 4,
+          fontWeight: FontWeight.w700,
+          color: cs.primary,
+          letterSpacing: -0.5,
+        ),
+        h3: TextStyle(
+          fontSize: settings.fontSize + 2,
+          fontWeight: FontWeight.w600,
+          color: cs.primary,
+        ),
+        h4: TextStyle(
+          fontSize: settings.fontSize,
+          fontWeight: FontWeight.w600,
+          color: cs.primary,
+        ),
+        strong: TextStyle(fontWeight: FontWeight.bold, color: cs.primary),
+        em: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurface),
+        code: TextStyle(
+          backgroundColor: cs.surfaceContainerHighest.withOpacity(0.3),
+          color: cs.onSurface,
+          fontFamily: 'monospace',
+          fontSize: (settings.fontSize - 1).clamp(12.0, 30.0),
+        ),
+        codeblockPadding: const EdgeInsets.all(12),
+        codeblockDecoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: cs.outline.withOpacity(0.1)),
+        ),
+        blockquote: TextStyle(
+          color: cs.onSurface.withOpacity(0.8),
+          fontStyle: FontStyle.italic,
+        ),
+        blockquotePadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
+        blockquoteDecoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(color: cs.primary.withOpacity(0.5), width: 4),
+          ),
+          color: cs.surfaceContainerHighest.withOpacity(0.3),
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(8),
+            bottomRight: Radius.circular(8),
+          ),
+        ),
+        listBullet: TextStyle(color: cs.onSurface.withOpacity(0.7)),
+        a: TextStyle(
+          color: cs.primary,
+          decoration: TextDecoration.underline,
+          decorationColor: cs.primary.withOpacity(0.3),
+        ),
+        blockSpacing: 12.0,
+        horizontalRuleDecoration: BoxDecoration(
+          border: Border(top: BorderSide(color: cs.outline.withOpacity(0.2))),
+        ),
+      ),
+    );
+  }
+
   void _copyOutputText(String text) {
     Clipboard.setData(ClipboardData(text: text));
     Toast.show(context, 'Copied');
   }
 
-  Widget _buildActionsBar(BuildContext context, TranslationProvider translation) {
+  Widget _buildActionsBar(
+    BuildContext context,
+    TranslationProvider translation,
+  ) {
     final settings = context.watch<SettingsProvider>();
     final actions = settings.enabledActions;
-    
+
     if (actions.isEmpty) return const SizedBox.shrink();
 
     final cs = Theme.of(context).colorScheme;
@@ -1047,31 +1153,38 @@ class _TranslatePageState extends State<TranslatePage> {
 
   IconData _getIconForAction(String iconName) {
     switch (iconName) {
-      case 'volume2': return LucideIcons.volume2;
-      case 'languages': return LucideIcons.languages;
-      case 'terminal': return LucideIcons.terminal;
-      case 'clipboard': return LucideIcons.clipboard;
-      case 'share': return LucideIcons.share;
-      case 'sparkles': return LucideIcons.sparkles;
-      case 'wand': return LucideIcons.wand;
-      case 'zap': return LucideIcons.zap;
-      case 'send': return LucideIcons.send;
-      case 'external_link': return LucideIcons.externalLink;
-      default: return LucideIcons.play;
+      case 'volume2':
+        return LucideIcons.volume2;
+      case 'languages':
+        return LucideIcons.languages;
+      case 'terminal':
+        return LucideIcons.terminal;
+      case 'clipboard':
+        return LucideIcons.clipboard;
+      case 'share':
+        return LucideIcons.share;
+      case 'sparkles':
+        return LucideIcons.sparkles;
+      case 'wand':
+        return LucideIcons.wand;
+      case 'zap':
+        return LucideIcons.zap;
+      case 'send':
+        return LucideIcons.send;
+      case 'external_link':
+        return LucideIcons.externalLink;
+      default:
+        return LucideIcons.play;
     }
   }
 
   void _openSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SettingsPage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
   }
-  
+
   void _showHistoryDialog(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    
     showDialog(
       context: context,
       builder: (dialogContext) => _ResizableHistoryDialog(
@@ -1097,26 +1210,27 @@ class _TranslatePageState extends State<TranslatePage> {
 /// Resizable history dialog widget
 class _ResizableHistoryDialog extends StatefulWidget {
   final void Function(TranslationHistoryItem item) onItemTap;
-  
+
   const _ResizableHistoryDialog({required this.onItemTap});
-  
+
   @override
-  State<_ResizableHistoryDialog> createState() => _ResizableHistoryDialogState();
+  State<_ResizableHistoryDialog> createState() =>
+      _ResizableHistoryDialogState();
 }
 
 class _ResizableHistoryDialogState extends State<_ResizableHistoryDialog> {
   double? _width;
   double? _height;
-  
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final screenSize = MediaQuery.of(context).size;
-    
+
     // Default to 80% of window size
     _width ??= screenSize.width * 0.8;
     _height ??= screenSize.height * 0.8;
-    
+
     return Dialog(
       child: Container(
         width: _width,
@@ -1144,13 +1258,19 @@ class _ResizableHistoryDialogState extends State<_ResizableHistoryDialog> {
                       const SizedBox(width: 8),
                       const Text(
                         'Translation History',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const Spacer(),
                       Consumer<HistoryProvider>(
                         builder: (context, history, _) => Text(
                           '${history.count}/${history.maxSize}',
-                          style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.5)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: cs.onSurface.withOpacity(0.5),
+                          ),
                         ),
                       ),
                     ],
@@ -1166,21 +1286,31 @@ class _ResizableHistoryDialogState extends State<_ResizableHistoryDialog> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(LucideIcons.inbox, size: 48, color: cs.onSurface.withOpacity(0.3)),
+                              Icon(
+                                LucideIcons.inbox,
+                                size: 48,
+                                color: cs.onSurface.withOpacity(0.3),
+                              ),
                               const SizedBox(height: 12),
                               Text(
                                 'No translation history yet',
-                                style: TextStyle(color: cs.onSurface.withOpacity(0.5)),
+                                style: TextStyle(
+                                  color: cs.onSurface.withOpacity(0.5),
+                                ),
                               ),
                             ],
                           ),
                         );
                       }
-                      
+
                       return ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         itemCount: history.history.length,
-                        separatorBuilder: (_, __) => Divider(color: cs.outline.withOpacity(0.1)),
+                        separatorBuilder: (_, __) =>
+                            Divider(color: cs.outline.withOpacity(0.1)),
                         itemBuilder: (context, index) {
                           final item = history.history[index];
                           return _HistoryItemTile(
@@ -1208,7 +1338,9 @@ class _ResizableHistoryDialogState extends State<_ResizableHistoryDialog> {
                               context: context,
                               builder: (ctx) => AlertDialog(
                                 title: const Text('Clear History?'),
-                                content: const Text('This will delete all translation history.'),
+                                content: const Text(
+                                  'This will delete all translation history.',
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.of(ctx).pop(),
@@ -1219,14 +1351,20 @@ class _ResizableHistoryDialogState extends State<_ResizableHistoryDialog> {
                                       history.clearHistory();
                                       Navigator.of(ctx).pop();
                                     },
-                                    child: Text('Clear', style: TextStyle(color: cs.error)),
+                                    child: Text(
+                                      'Clear',
+                                      style: TextStyle(color: cs.error),
+                                    ),
                                   ),
                                 ],
                               ),
                             );
                           }
                         },
-                        child: Text('Clear All', style: TextStyle(color: cs.error)),
+                        child: Text(
+                          'Clear All',
+                          style: TextStyle(color: cs.error),
+                        ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -1245,8 +1383,14 @@ class _ResizableHistoryDialogState extends State<_ResizableHistoryDialog> {
                 onPanUpdate: (details) {
                   final screenSize = MediaQuery.of(context).size;
                   setState(() {
-                    _width = (_width! + details.delta.dx).clamp(350.0, screenSize.width * 0.95);
-                    _height = (_height! + details.delta.dy).clamp(250.0, screenSize.height * 0.95);
+                    _width = (_width! + details.delta.dx).clamp(
+                      350.0,
+                      screenSize.width * 0.95,
+                    );
+                    _height = (_height! + details.delta.dy).clamp(
+                      250.0,
+                      screenSize.height * 0.95,
+                    );
                   });
                 },
                 child: MouseRegion(
@@ -1277,36 +1421,36 @@ class _HistoryItemTile extends StatefulWidget {
   final TranslationHistoryItem item;
   final VoidCallback onTap;
   final VoidCallback onDelete;
-  
+
   const _HistoryItemTile({
     required this.item,
     required this.onTap,
     required this.onDelete,
   });
-  
+
   @override
   State<_HistoryItemTile> createState() => _HistoryItemTileState();
 }
 
 class _HistoryItemTileState extends State<_HistoryItemTile> {
   bool _isHovered = false;
-  
+
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final diff = now.difference(timestamp);
-    
+
     if (diff.inMinutes < 1) return 'Just now';
     if (diff.inHours < 1) return '${diff.inMinutes}m ago';
     if (diff.inDays < 1) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${timestamp.month}/${timestamp.day}';
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final item = widget.item;
-    
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -1325,7 +1469,11 @@ class _HistoryItemTileState extends State<_HistoryItemTile> {
                     // Input
                     Row(
                       children: [
-                        Icon(LucideIcons.fileInput, size: 12, color: cs.primary.withOpacity(0.7)),
+                        Icon(
+                          LucideIcons.fileInput,
+                          size: 12,
+                          color: cs.primary.withOpacity(0.7),
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -1341,14 +1489,21 @@ class _HistoryItemTileState extends State<_HistoryItemTile> {
                     // Output
                     Row(
                       children: [
-                        Icon(LucideIcons.fileOutput, size: 12, color: cs.onSurface.withOpacity(0.5)),
+                        Icon(
+                          LucideIcons.fileOutput,
+                          size: 12,
+                          color: cs.onSurface.withOpacity(0.5),
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             item.outputText,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurface.withOpacity(0.7),
+                            ),
                           ),
                         ),
                       ],
@@ -1359,17 +1514,26 @@ class _HistoryItemTileState extends State<_HistoryItemTile> {
                       children: [
                         Text(
                           '${item.sourceLanguage} → ${item.targetLanguage}',
-                          style: TextStyle(fontSize: 10, color: cs.onSurface.withOpacity(0.4)),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: cs.onSurface.withOpacity(0.4),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           '• ${item.mode}',
-                          style: TextStyle(fontSize: 10, color: cs.onSurface.withOpacity(0.4)),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: cs.onSurface.withOpacity(0.4),
+                          ),
                         ),
                         const Spacer(),
                         Text(
                           _formatTimestamp(item.timestamp),
-                          style: TextStyle(fontSize: 10, color: cs.onSurface.withOpacity(0.4)),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: cs.onSurface.withOpacity(0.4),
+                          ),
                         ),
                       ],
                     ),
@@ -1381,10 +1545,17 @@ class _HistoryItemTileState extends State<_HistoryItemTile> {
                 opacity: _isHovered ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 150),
                 child: IconButton(
-                  icon: Icon(LucideIcons.trash2, size: 16, color: cs.error.withOpacity(0.7)),
+                  icon: Icon(
+                    LucideIcons.trash2,
+                    size: 16,
+                    color: cs.error.withOpacity(0.7),
+                  ),
                   onPressed: widget.onDelete,
                   tooltip: 'Delete',
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                   padding: EdgeInsets.zero,
                 ),
               ),
@@ -1411,7 +1582,7 @@ class _ContextMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1423,13 +1594,7 @@ class _ContextMenuButton extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: cs.onSurface),
               const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurface,
-                ),
-              ),
+              Text(label, style: TextStyle(fontSize: 13, color: cs.onSurface)),
             ],
           ),
         ),
@@ -1465,7 +1630,8 @@ class _SelectionToolbar extends StatefulWidget {
 }
 
 class _SelectionToolbarState extends State<_SelectionToolbar> {
-  String? _loadingActionId; // null = not loading, 'explain' or action.id = loading that item
+  String?
+  _loadingActionId; // null = not loading, 'explain' or action.id = loading that item
   bool _isHovering = false;
 
   Future<void> _handleExplain() async {
@@ -1496,13 +1662,16 @@ class _SelectionToolbarState extends State<_SelectionToolbar> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenSize = MediaQuery.of(context).size;
-    
+
     // Calculate toolbar width based on number of items
     final itemCount = 2 + widget.actions.length; // Explain + actions + Copy
     final toolbarWidth = itemCount * 75.0 + 20;
 
     return Positioned(
-      left: (widget.position.dx - toolbarWidth / 2).clamp(10, screenSize.width - toolbarWidth - 10),
+      left: (widget.position.dx - toolbarWidth / 2).clamp(
+        10,
+        screenSize.width - toolbarWidth - 10,
+      ),
       top: (widget.position.dy - 55).clamp(10, screenSize.height - 55),
       child: MouseRegion(
         onEnter: (_) {
@@ -1514,68 +1683,81 @@ class _SelectionToolbarState extends State<_SelectionToolbar> {
           widget.onHover(false);
         },
         child: TapRegion(
-          onTapOutside: _loadingActionId != null ? null : (_) => widget.onDismiss(),
-        child: Material(
-          type: MaterialType.transparency,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.black.withOpacity(0.7)
-                      : Colors.white.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: cs.outlineVariant.withOpacity(0.3),
-                    width: 0.5,
+          onTapOutside: _loadingActionId != null
+              ? null
+              : (_) => widget.onDismiss(),
+          child: Material(
+            type: MaterialType.transparency,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.black.withOpacity(0.7)
+                        : Colors.white.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: cs.outlineVariant.withOpacity(0.3),
+                      width: 0.5,
                     ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Explain (first)
-                    _ToolbarButton(
-                      icon: _loadingActionId == 'explain' ? null : LucideIcons.messageCircleQuestion,
-                      label: 'Explain',
-                      isLoading: _loadingActionId == 'explain',
-                      onTap: _loadingActionId != null ? () {} : _handleExplain,
-                    ),
-                    _divider(cs),
-                    
-                    // Custom actions (middle)
-                    for (final action in widget.actions) ...[
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Explain (first)
                       _ToolbarButton(
-                        icon: _loadingActionId == action.id ? null : _getIconForAction(action.iconName),
-                        label: action.name,
-                        isLoading: _loadingActionId == action.id,
-                        onTap: _loadingActionId != null ? () {} : () => _handleAction(action),
+                        icon: _loadingActionId == 'explain'
+                            ? null
+                            : LucideIcons.messageCircleQuestion,
+                        label: 'Explain',
+                        isLoading: _loadingActionId == 'explain',
+                        onTap: _loadingActionId != null
+                            ? () {}
+                            : _handleExplain,
                       ),
                       _divider(cs),
+
+                      // Custom actions (middle)
+                      for (final action in widget.actions) ...[
+                        _ToolbarButton(
+                          icon: _loadingActionId == action.id
+                              ? null
+                              : _getIconForAction(action.iconName),
+                          label: action.name,
+                          isLoading: _loadingActionId == action.id,
+                          onTap: _loadingActionId != null
+                              ? () {}
+                              : () => _handleAction(action),
+                        ),
+                        _divider(cs),
+                      ],
+
+                      // Copy (last)
+                      _ToolbarButton(
+                        icon: LucideIcons.copy,
+                        label: 'Copy',
+                        onTap: _loadingActionId != null ? () {} : widget.onCopy,
+                      ),
                     ],
-                    
-                    // Copy (last)
-                    _ToolbarButton(
-                      icon: LucideIcons.copy,
-                      label: 'Copy',
-                      onTap: _loadingActionId != null ? () {} : widget.onCopy,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -1591,17 +1773,28 @@ class _SelectionToolbarState extends State<_SelectionToolbar> {
 
   IconData _getIconForAction(String iconName) {
     switch (iconName) {
-      case 'volume2': return LucideIcons.volume2;
-      case 'languages': return LucideIcons.languages;
-      case 'search': return LucideIcons.search;
-      case 'sparkles': return LucideIcons.sparkles;
-      case 'terminal': return LucideIcons.terminal;
-      case 'clipboard': return LucideIcons.clipboard;
-      case 'share': return LucideIcons.share;
-      case 'wand': return LucideIcons.wand;
-      case 'zap': return LucideIcons.zap;
-      case 'send': return LucideIcons.send;
-      default: return LucideIcons.play;
+      case 'volume2':
+        return LucideIcons.volume2;
+      case 'languages':
+        return LucideIcons.languages;
+      case 'search':
+        return LucideIcons.search;
+      case 'sparkles':
+        return LucideIcons.sparkles;
+      case 'terminal':
+        return LucideIcons.terminal;
+      case 'clipboard':
+        return LucideIcons.clipboard;
+      case 'share':
+        return LucideIcons.share;
+      case 'wand':
+        return LucideIcons.wand;
+      case 'zap':
+        return LucideIcons.zap;
+      case 'send':
+        return LucideIcons.send;
+      default:
+        return LucideIcons.play;
     }
   }
 }
@@ -1634,7 +1827,9 @@ class _ToolbarButtonState extends State<_ToolbarButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
-      cursor: widget.isLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      cursor: widget.isLoading
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.isLoading ? null : widget.onTap,
         child: AnimatedContainer(
