@@ -1,16 +1,27 @@
 import '../../models/language.dart';
 
+/// Basic model metadata returned by provider APIs.
+class ModelInfo {
+  final String id;
+  final String displayName;
+
+  const ModelInfo({required this.id, required this.displayName});
+}
+
 /// Abstract base class for AI translation engines
 /// All engines must implement this interface for consistent behavior
 abstract class BaseEngine {
+  /// Fetch the models exposed by the provider.
+  Future<List<ModelInfo>> fetchModels();
+
   /// Translate text and return a stream of response chunks (for streaming)
-  /// 
+  ///
   /// Parameters:
   /// - [text]: The text to translate/process
   /// - [sourceLanguage]: Source language code (or 'auto' for detection)
   /// - [targetLanguage]: Target language code
   /// - [mode]: Translation mode (translate, explain)
-  /// 
+  ///
   /// Returns a stream of text chunks for real-time display
   Stream<String> translate({
     required String text,
@@ -20,13 +31,13 @@ abstract class BaseEngine {
   });
 
   /// Explain a selected word/phrase in the context of a sentence
-  /// 
+  ///
   /// Parameters:
   /// - [selectedWord]: The word or phrase selected by user
   /// - [fullContext]: The full sentence containing the word
   /// - [sourceLanguage]: Source language code
   /// - [targetLanguage]: Target language for explanation
-  /// 
+  ///
   /// Returns a stream of explanation chunks
   Stream<String> explainInContext({
     required String selectedWord,

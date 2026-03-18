@@ -2,7 +2,7 @@ import '../models/language.dart';
 import '../models/provider_config.dart';
 import '../models/prompt_templates.dart';
 import 'engines/base_engine.dart';
-import 'engines/openai_compatible_engine.dart';
+import 'engines/engine_factory.dart';
 
 /// Service for managing translation operations
 /// Handles engine selection and translation execution
@@ -17,10 +17,7 @@ class TranslationService {
   void setProvider(ProviderConfig provider) {
     _activeProvider = provider;
     _engine?.dispose();
-    _engine = OpenAICompatibleEngine(
-      config: provider,
-      promptTemplates: _promptTemplates,
-    );
+    _engine = createEngine(config: provider, promptTemplates: _promptTemplates);
   }
 
   /// Set prompt templates and refresh active engine.
@@ -29,7 +26,7 @@ class TranslationService {
     final provider = _activeProvider;
     if (provider != null) {
       _engine?.dispose();
-      _engine = OpenAICompatibleEngine(
+      _engine = createEngine(
         config: provider,
         promptTemplates: _promptTemplates,
       );

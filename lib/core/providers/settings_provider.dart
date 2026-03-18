@@ -6,7 +6,7 @@ import '../models/custom_action.dart';
 import '../models/language.dart';
 import '../models/prompt_templates.dart';
 import '../services/translation_service.dart';
-import '../services/engines/openai_compatible_engine.dart';
+import '../services/engines/engine_factory.dart';
 
 /// Main settings provider for the application
 /// Manages AI providers, custom actions, and user preferences
@@ -202,7 +202,10 @@ class SettingsProvider extends ChangeNotifier {
 
   /// Fetch available models from a provider
   Future<List<String>> fetchModels(ProviderConfig provider) async {
-    final engine = OpenAICompatibleEngine(config: provider);
+    final engine = createEngine(
+      config: provider,
+      promptTemplates: _promptTemplates,
+    );
     try {
       final models = await engine.fetchModels();
       return models.map((m) => m.id).toList();

@@ -7,14 +7,6 @@ import '../../models/provider_config.dart';
 import '../../models/prompt_templates.dart';
 import 'base_engine.dart';
 
-/// Available model info returned from API
-class ModelInfo {
-  final String id;
-  final String displayName;
-
-  const ModelInfo({required this.id, required this.displayName});
-}
-
 /// OpenAI-compatible engine that works with:
 /// - OpenAI API (api.openai.com)
 /// - OpenRouter (openrouter.ai)
@@ -37,6 +29,7 @@ class OpenAICompatibleEngine extends BaseEngine {
   String get name => config.name;
 
   /// Fetch available models from the provider (with retry)
+  @override
   Future<List<ModelInfo>> fetchModels() async {
     final url = _buildModelsUrl();
     final headers = _buildHeaders();

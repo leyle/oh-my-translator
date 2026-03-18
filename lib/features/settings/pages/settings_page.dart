@@ -8,7 +8,8 @@ import '../../../core/models/custom_action.dart';
 import '../../../core/models/language.dart';
 import '../../../core/models/prompt_templates.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../core/services/engines/openai_compatible_engine.dart';
+import '../../../core/services/engines/base_engine.dart';
+import '../../../core/services/engines/engine_factory.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -1135,6 +1136,13 @@ class _ProviderPreset {
 class _ProviderEditPageState extends State<ProviderEditPage> {
   static const List<_ProviderPreset> _providerPresets = [
     _ProviderPreset(
+      label: 'Claude',
+      name: 'Claude',
+      apiUrl: 'https://api.anthropic.com/v1',
+      apiPath: '/messages',
+      model: 'claude-sonnet-4-5',
+    ),
+    _ProviderPreset(
       label: 'OpenAI',
       name: 'OpenAI',
       apiUrl: 'https://api.openai.com/v1',
@@ -1256,7 +1264,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
     });
 
     try {
-      final engine = OpenAICompatibleEngine(config: _buildTempProvider());
+      final engine = createEngine(config: _buildTempProvider());
       final success = await engine.testConnection();
       engine.dispose();
 
@@ -1287,7 +1295,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
     });
 
     try {
-      final engine = OpenAICompatibleEngine(config: _buildTempProvider());
+      final engine = createEngine(config: _buildTempProvider());
       final models = await engine.fetchModels();
       engine.dispose();
 
@@ -1435,7 +1443,7 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
             controller: _nameController,
             decoration: const InputDecoration(
               labelText: 'Name',
-              hintText: 'e.g., OpenAI, OpenRouter, Gemini',
+              hintText: 'e.g., Claude, OpenAI, OpenRouter, Gemini',
               border: OutlineInputBorder(),
             ),
           ),
@@ -1502,7 +1510,8 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
             controller: _urlController,
             decoration: const InputDecoration(
               labelText: 'API Base URL',
-              hintText: 'https://api.openai.com/v1 or .../v1beta/openai',
+              hintText:
+                  'https://api.anthropic.com/v1 or https://api.openai.com/v1',
               border: OutlineInputBorder(),
             ),
           ),
@@ -1513,7 +1522,8 @@ class _ProviderEditPageState extends State<ProviderEditPage> {
             controller: _pathController,
             decoration: const InputDecoration(
               labelText: 'API Path',
-              hintText: '/chat/completions (usually)',
+              hintText:
+                  '/messages for Claude, /chat/completions for OpenAI APIs',
               border: OutlineInputBorder(),
             ),
           ),
