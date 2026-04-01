@@ -36,7 +36,7 @@ if [ -z "$TEXT" ]; then
 fi
 
 # URL-encode the text
-ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$TEXT'''))")
+ENCODED=$(printf '%s' "$TEXT" | python3 -c "import sys, urllib.parse; t=sys.stdin.read(); t=' '.join(t.split()); print(urllib.parse.quote(t))")
 
 # Build URL with optional target language
 URL="omt://translate?text=$ENCODED"

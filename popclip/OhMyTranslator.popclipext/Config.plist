@@ -11,6 +11,8 @@
                 <string>icon.png</string>
                 <key>Title</key>
                 <string>OhMyTranslator</string>
+                <key>Pass HTML</key>
+                <true/>
             </dict>
         </array>
         <key>Credits</key>
